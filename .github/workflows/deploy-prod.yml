@@ -27,35 +27,37 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch }}
 
-      - name: Render monitoring environment
+      - name: Prepare deploy bundle
         env:
           OPENOBSERVE_ROOT_PASSWORD: ${{ secrets.OPENOBSERVE_ROOT_PASSWORD }}
-        run: node scripts/render-monitoring-env.mjs --deploy-env prod --output deploy/.env
-
-      - name: Prepare deploy bundle
         run: |
           set -euo pipefail
-          rm -rf deploy-package
-          mkdir -p deploy-package
-          cp monitoring/docker-compose.yml deploy-package/
-          cp monitoring/otel-collector-config.yaml deploy-package/
-          cp deploy/.env deploy-package/monitoring.env
-          chmod -R a+rX deploy-package
-          ls -la deploy-package/
+          rm -rf monitoring-upload
+          mkdir -p monitoring-upload
+          cp monitoring/docker-compose.yml monitoring-upload/
+          cp monitoring/otel-collector-config.yaml monitoring-upload/
+          node scripts/render-monitoring-env.mjs --deploy-env prod --output monitoring-upload/monitoring.env
+          ls -la monitoring-upload/
 
       - name: Upload to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_SSH_PORT }}
-          source: >-
-            deploy-package/docker-compose.yml,
-            deploy-package/otel-collector-config.yaml,
-            deploy-package/monitoring.env
-          target: /apps/monitoring/current
-          strip_components: 1
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -p "$VPS_PORT" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" "mkdir -p /apps/monitoring/current"
+          scp -P "$VPS_PORT" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            monitoring-upload/docker-compose.yml \
+            monitoring-upload/otel-collector-config.yaml \
+            monitoring-upload/monitoring.env \
+            "$VPS_USER@$VPS_HOST:/apps/monitoring/current/"
 
       - name: Deploy on VPS
         uses: appleboy/ssh-action@v1.0.3
@@ -73,7 +75,9 @@ jobs:
             if [ -f "$DEPLOY_DIR/monitoring.env" ]; then
               mv -f "$DEPLOY_DIR/monitoring.env" "$DEPLOY_DIR/.env"
             fi
-            chmod 600 "$DEPLOY_DIR/.env"
+            if [ -f "$DEPLOY_DIR/.env" ]; then
+              chmod 600 "$DEPLOY_DIR/.env"
+            fi
 
             cd "$DEPLOY_DIR"
             docker compose --env-file .env pull
