@@ -34,9 +34,9 @@ jobs:
           mkdir -p deploy-package
           cp monitoring/docker-compose.yml deploy-package/
           cp monitoring/otel-collector-config.yaml deploy-package/
-          cp deploy/.env deploy-package/.env
-          # scp-action runs tar in a container user that cannot read mode-600 files owned by the runner.
-          chmod 644 deploy-package/.env
+          # Non-hidden name: scp-action tar runs as a different user and often cannot read dotfiles.
+          cp deploy/.env deploy-package/monitoring.env
+          chmod -R a+rX deploy-package
           ls -la deploy-package/
 
       - name: Upload to VPS
@@ -46,7 +46,10 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
-          source: 'deploy-package/*'
+          source: >-
+            deploy-package/docker-compose.yml,
+            deploy-package/otel-collector-config.yaml,
+            deploy-package/monitoring.env
           target: /apps/monitoring/current
           strip_components: 1
 
@@ -63,6 +66,9 @@ jobs:
             DATA_DIR="/apps/monitoring/data"
 
             mkdir -p "$DEPLOY_DIR" "$DATA_DIR"
+            if [ -f "$DEPLOY_DIR/monitoring.env" ]; then
+              mv -f "$DEPLOY_DIR/monitoring.env" "$DEPLOY_DIR/.env"
+            fi
             chmod 600 "$DEPLOY_DIR/.env"
 
             cd "$DEPLOY_DIR"

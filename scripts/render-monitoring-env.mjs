@@ -97,7 +97,8 @@ function main() {
   vars.OPENOBSERVE_DATA_DIR = vars.OPENOBSERVE_DATA_DIR || '/apps/monitoring/data';
 
   mkdirSync(dirname(output), { recursive: true });
-  writeFileSync(output, serializeEnv(vars), { mode: 0o600 });
+  // 0644 so CI tar/scp (often a different container user) can read the file before upload.
+  writeFileSync(output, serializeEnv(vars), { mode: 0o644 });
 
   console.log(`Rendered ${output} (deploy_env=${deployEnv}, org=${vars.OPENOBSERVE_ORG})`);
 }
