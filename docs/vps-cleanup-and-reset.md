@@ -251,7 +251,7 @@ redis-cli -p 6379 -a "$REDIS_PROD_PASSWORD" --no-auth-warning PING
 
 ```bash
 cd /apps/monitoring/current 2>/dev/null || exit 0
-docker compose --env-file .env down 2>/dev/null || true
+docker compose -p plys-monitoring --env-file .env down 2>/dev/null || true
 
 # Remove OpenObserve data (destructive — logs/traces in OpenObserve are lost)
 rm -rf /apps/monitoring/data/*
@@ -264,8 +264,8 @@ To reset only containers (keep ingested data):
 
 ```bash
 cd /apps/monitoring/current
-docker compose --env-file .env down
-docker compose --env-file .env up -d
+docker compose -p plys-monitoring --env-file .env down
+docker compose -p plys-monitoring --env-file .env up -d
 ```
 
 See [vps-monitoring-openobserve.md](vps-monitoring-openobserve.md) for full setup.
