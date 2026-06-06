@@ -35,7 +35,8 @@ jobs:
           cp monitoring/docker-compose.yml deploy-package/
           cp monitoring/otel-collector-config.yaml deploy-package/
           cp deploy/.env deploy-package/.env
-          chmod 600 deploy-package/.env
+          # scp-action runs tar in a container user that cannot read mode-600 files owned by the runner.
+          chmod 644 deploy-package/.env
           ls -la deploy-package/
 
       - name: Upload to VPS
