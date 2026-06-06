@@ -1,0 +1,54 @@
+# Prod VPS only — copy to /apps/docker-compose.yml
+# Postgres plys-db :5432, Redis :6379
+# Adminer :8080, Redis Insight :5540 (loopback; see vps-data-tools-adminer-redis-insight.md)
+
+services:
+  postgres-prod:
+    image: postgres:16-alpine
+    container_name: postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: plys_prod
+      POSTGRES_PASSWORD: "${POSTGRES_PROD_PASSWORD:?set POSTGRES_PROD_PASSWORD}"
+      POSTGRES_DB: plys-db
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-prod-data:/var/lib/postgresql/data
+
+  redis-prod:
+    image: redis:7-alpine
+    container_name: redis-prod
+    restart: unless-stopped
+    command: redis-server --requirepass "${REDIS_PROD_PASSWORD:?set REDIS_PROD_PASSWORD}"
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-prod-data:/data
+
+  adminer:
+    image: adminer:4
+    container_name: adminer
+    restart: unless-stopped
+    depends_on:
+      - postgres-prod
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres-prod
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight
+    restart: unless-stopped
+    depends_on:
+      - redis-prod
+    ports:
+      - "127.0.0.1:5540:5540"
+    volumes:
+      - redisinsight-data:/data
+
+volumes:
+  postgres-prod-data:
+  redis-prod-data:
+  redisinsight-data:
