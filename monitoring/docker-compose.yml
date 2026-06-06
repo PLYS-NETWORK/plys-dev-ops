@@ -2,6 +2,9 @@
 # Data persists in /apps/monitoring/data (host bind mount).
 # Loopback-only ports — expose UI via nginx (observe-dev.lona.my / observe.lona.my).
 
+# Isolate from app stacks that also use a "current" deploy directory (default project name).
+name: plys-monitoring
+
 services:
   openobserve:
     image: public.ecr.aws/zinclabs/openobserve:v0.90.0
@@ -18,12 +21,7 @@ services:
       - "127.0.0.1:5080:5080"
     volumes:
       - ${OPENOBSERVE_DATA_DIR:-/apps/monitoring/data}:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5080/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
+    # Official image has no curl/shell — in-container healthcheck always fails (see openobserve#6561).
     networks:
       - monitoring-net
 
@@ -46,7 +44,7 @@ services:
       - "127.0.0.1:4318:4318"
     depends_on:
       openobserve:
-        condition: service_healthy
+        condition: service_started
     networks:
       - monitoring-net
 

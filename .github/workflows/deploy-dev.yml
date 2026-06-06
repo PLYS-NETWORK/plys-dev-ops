@@ -75,14 +75,29 @@ jobs:
             fi
 
             cd "$DEPLOY_DIR"
-            docker compose --env-file .env pull
-            docker compose --env-file .env up -d
+            docker compose -p plys-monitoring --env-file .env pull
+            docker compose -p plys-monitoring --env-file .env up -d
 
-            echo "==> Health check"
-            curl -sf http://127.0.0.1:5080/health
+            echo "==> Wait for OpenObserve (host health probe)"
+            ready=0
+            for i in $(seq 1 90); do
+              if curl -sf http://127.0.0.1:5080/health >/dev/null 2>&1 \
+                || curl -sf http://127.0.0.1:5080/healthz >/dev/null 2>&1; then
+                echo "openobserve ready after ${i} attempt(s)"
+                ready=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$ready" -ne 1 ]; then
+              echo "openobserve failed to become healthy"
+              docker logs openobserve --tail 100 || true
+              docker compose -p plys-monitoring --env-file .env ps
+              exit 1
+            fi
 
             echo "==> Container status"
-            docker compose --env-file .env ps
+            docker compose -p plys-monitoring --env-file .env ps
 
             echo "✓ Monitoring stack deployed to dev VPS"
 

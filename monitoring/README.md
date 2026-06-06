@@ -58,9 +58,9 @@ Workflow renders `.env` from secrets, SCPs bundle to `/apps/monitoring/current`,
 
 ```bash
 cd /apps/monitoring/current
-docker compose --env-file .env ps
-docker compose --env-file .env logs -f otel-collector
-curl -sf http://127.0.0.1:5080/health
+docker compose -p plys-monitoring --env-file .env ps
+docker compose -p plys-monitoring --env-file .env logs -f otel-collector
+curl -sf http://127.0.0.1:5080/health || curl -sf http://127.0.0.1:5080/healthz
 ```
 
 ## Local smoke test (optional)

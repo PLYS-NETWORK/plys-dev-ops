@@ -362,6 +362,8 @@ Verify Docker host gateway on each VPS: `ip route | grep default` (often `172.17
 | Collector 401 | `docker compose logs otel-collector` on dev VPS | Same on prod VPS |
 | Wrong environment data | You are on dev VPS? Use `observe-dev.lona.my` | Use `observe.lona.my` on prod VPS only |
 | Port conflict | `ss -tlnp \| grep 5080` — not `:3100`/`:3200` (internal-hub FE) | Same |
+| `openobserve is unhealthy` / otel-collector won't start | Official image has no `curl` for in-container healthcheck — use project `plys-monitoring` and host `curl http://127.0.0.1:5080/health` | Same |
+| Orphan `current-api-gateway-*` warnings | App stack shares default project name `current` — monitoring uses `name: plys-monitoring` in compose | Same |
 
 **Reset monitoring only:** [vps-cleanup-and-reset.md](vps-cleanup-and-reset.md) §8
 
@@ -369,9 +371,10 @@ Verify Docker host gateway on each VPS: `ip route | grep default` (often `172.17
 
 ```bash
 cd /apps/monitoring/current
-docker compose --env-file .env pull
-docker compose --env-file .env up -d
-docker compose --env-file .env logs -f --tail 50
+docker compose -p plys-monitoring --env-file .env pull
+docker compose -p plys-monitoring --env-file .env up -d
+docker compose -p plys-monitoring --env-file .env logs -f --tail 50
+curl -sf http://127.0.0.1:5080/health || curl -sf http://127.0.0.1:5080/healthz
 ```
 
 **Re-deploy from CI:** run the matching workflow (**Dev** or **Prod**) in `plys-dev-ops`.
