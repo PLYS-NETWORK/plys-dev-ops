@@ -15,9 +15,9 @@ Configure **two** GitHub Environments on **each** of the three monorepos: `dev` 
 
 On a **true** combined single VPS you may register **two** org runners (dev + prod labels) or one runner with both labels — prefer **two groups, two machines** when possible.
 
-**Workflow access lists:** [§4.7](../vps-started/02-self-hosted-runner.md#47-workflow-access--full-copy-paste-lists)
+**Workflow access lists (22 per group, includes monitoring):** [§4.7](../vps-started/02-self-hosted-runner.md#47-workflow-access--full-copy-paste-lists)
 
-**Repositories (both groups):** `plys-internal-hub-service-api`, `plys-internal-hub`, `plys-monorepo-webapps`
+**Repositories (both groups):** `plys-internal-hub-service-api`, `plys-internal-hub`, `plys-monorepo-webapps`, `plys-dev-ops`
 
 ---
 

@@ -11,8 +11,8 @@ Use GitHub **Environment `production`** on each repo. Prod deploy workflows are 
 | Step | Where | Action |
 |------|-------|--------|
 | 1.1 | Org → **Settings** → **Actions** → **Runner groups** | Create `plys-prod-runners` — [runner guide §4](../vps-started/02-self-hosted-runner.md#4-organization-runner-groups-dev--prod) |
-| 1.2 | Same group | **Repository access:** `plys-internal-hub-service-api`, `plys-internal-hub`, `plys-monorepo-webapps` |
-| 1.3 | Same group | **Workflow access:** prod deploy workflows on `refs/heads/main` — [§4.7](../vps-started/02-self-hosted-runner.md#47-workflow-access--full-copy-paste-lists) |
+| 1.2 | Same group | **Repository access:** `plys-internal-hub-service-api`, `plys-internal-hub`, `plys-monorepo-webapps`, `plys-dev-ops` |
+| 1.3 | Same group | **Workflow access:** 22 workflows on `refs/heads/main` (includes `PLYS-NETWORK/plys-dev-ops/.github/workflows/deploy-prod.yml@refs/heads/main`) — [§4.7](../vps-started/02-self-hosted-runner.md#47-workflow-access--full-copy-paste-lists) |
 | 1.4 | Prod VPS | Register runner with `--runnergroup plys-prod-runners` — [§5–6](../vps-started/02-self-hosted-runner.md#5-register-runner) |
 
 ---

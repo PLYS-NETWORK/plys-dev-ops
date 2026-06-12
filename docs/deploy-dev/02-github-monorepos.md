@@ -11,8 +11,8 @@ Set secrets on each repository under GitHub **Environment `dev`** (not repositor
 | Step | Where | Action |
 |------|-------|--------|
 | 1.1 | Org → **Settings** → **Actions** → **Runner groups** | Create `plys-dev-runners` — [runner guide §4](../vps-started/02-self-hosted-runner.md#4-organization-runner-groups-dev--prod) |
-| 1.2 | Same group | **Repository access:** `plys-internal-hub-service-api`, `plys-internal-hub`, `plys-monorepo-webapps` |
-| 1.3 | Same group | **Workflow access:** dev deploy workflows on `refs/heads/develop` — [§4.7 full list](../vps-started/02-self-hosted-runner.md#47-workflow-access--full-copy-paste-lists) |
+| 1.2 | Same group | **Repository access:** `plys-internal-hub-service-api`, `plys-internal-hub`, `plys-monorepo-webapps`, `plys-dev-ops` |
+| 1.3 | Same group | **Workflow access:** 22 workflows (21 app monorepos on `develop` + `PLYS-NETWORK/plys-dev-ops/.github/workflows/deploy-dev.yml@refs/heads/main`) — [§4.7 full list](../vps-started/02-self-hosted-runner.md#47-workflow-access--full-copy-paste-lists) |
 | 1.4 | Dev VPS | Register runner with `--runnergroup plys-dev-runners` — [§5–6](../vps-started/02-self-hosted-runner.md#5-register-runner) |
 
 ---

@@ -63,6 +63,15 @@ Configure **separately** under GitHub → Settings → Environments:
 
 Do **not** use `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, or `VPS_SSH_PORT` — deploy jobs run on the VPS self-hosted runner. See [Self-hosted runner](02-self-hosted-runner.md).
 
+**Runner group workflow access:** add `plys-dev-ops` to repository access on both runner groups, then allow:
+
+| Runner group | Workflow |
+|--------------|----------|
+| `plys-dev-runners` | `PLYS-NETWORK/plys-dev-ops/.github/workflows/deploy-dev.yml@refs/heads/main` |
+| `plys-prod-runners` | `PLYS-NETWORK/plys-dev-ops/.github/workflows/deploy-prod.yml@refs/heads/main` |
+
+Full copy-paste lists (22 workflows per group): [Self-hosted runner §4.7](02-self-hosted-runner.md#47-workflow-access--full-copy-paste-lists).
+
 Generate a safe password (run once per environment):
 
 ```bash

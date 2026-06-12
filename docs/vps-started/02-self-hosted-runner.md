@@ -88,7 +88,7 @@ Log out and back in, or restart the runner service after adding `github-runner` 
 
 ## 4. Organization runner groups (dev + prod)
 
-Use **organization-level** runners when all three deploy monorepos share the same dev and prod VPS hosts. Runner groups control **which repositories and workflows** may use each environment’s runners.
+Use **organization-level** runners when the three app monorepos and `plys-dev-ops` share the same dev and prod VPS hosts. Runner groups control **which repositories and workflows** may use each environment’s runners.
 
 Organization slug: **`PLYS-NETWORK`** (use exact casing in workflow access fields).
 
@@ -120,6 +120,7 @@ Create **two** groups — one per VPS environment. Never put dev and prod runner
    - `plys-internal-hub-service-api`
    - `plys-internal-hub`
    - `plys-monorepo-webapps`
+   - `plys-dev-ops`
 5. **Workflow access** (if shown on your plan): **Selected workflows** → allow only dev deploy workflows, for example:
    - `PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.yml@refs/heads/develop`
    - `PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-dev-internal-hub.yml@refs/heads/develop`
@@ -129,8 +130,9 @@ Create **two** groups — one per VPS environment. Never put dev and prod runner
    - `PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-ployos-app.yml@refs/heads/develop`
    - `PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-lonaos-marketing.yml@refs/heads/develop`
    - `PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-ployos-marketing.yml@refs/heads/develop`
+   - `PLYS-NETWORK/plys-dev-ops/.github/workflows/deploy-dev.yml@refs/heads/main`
 
-   Pin workflows to `refs/heads/develop` (or your dev branch). Use fully qualified refs (`refs/heads/...`) per GitHub docs.
+   Pin app monorepo workflows to `refs/heads/develop` (or your dev branch). `plys-dev-ops` monitoring workflows use `refs/heads/main`. Use fully qualified refs (`refs/heads/...`) per GitHub docs.
 
    If workflow access is not available on your plan, rely on **repository access** + `environment: dev` + label `plys-dev-vps` instead.
 
@@ -143,7 +145,7 @@ Repeat Section 4.3 with:
 | Setting | Value |
 |---------|-------|
 | **Group name** | `plys-prod-runners` |
-| **Repository access** | Same three repos (selected list) |
+| **Repository access** | Same four repos (selected list), including `plys-dev-ops` |
 | **Workflow access** | Prod deploy workflows on `refs/heads/main`, for example: |
 | | `PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.yml@refs/heads/main` |
 | | `PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-prod-internal-hub.yml@refs/heads/main` |
@@ -153,6 +155,7 @@ Repeat Section 4.3 with:
 | | `PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-ployos-app.yml@refs/heads/main` |
 | | `PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-lonaos-marketing.yml@refs/heads/main` |
 | | `PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-ployos-marketing.yml@refs/heads/main` |
+| | `PLYS-NETWORK/plys-dev-ops/.github/workflows/deploy-prod.yml@refs/heads/main` |
 
 Keep **production** environment protection rules (required reviewers) on all prod workflows regardless of runner group settings.
 
@@ -162,8 +165,8 @@ After both groups exist:
 
 | Check | Dev (`plys-dev-runners`) | Prod (`plys-prod-runners`) |
 |-------|--------------------------|----------------------------|
-| Repositories | Only the three deploy monorepos | Only the three deploy monorepos |
-| Workflows | Dev deploy workflows on `develop` | Prod deploy workflows on `main` |
+| Repositories | Four repos: three app monorepos + `plys-dev-ops` | Same four repos |
+| Workflows | App deploy workflows on `develop`; `plys-dev-ops` monitoring on `main` | App + monitoring prod workflows on `main` |
 | Runners | Dev VPS machine(s) only | Prod VPS machine(s) only |
 | Cross-use | Prod workflows must **not** match dev group | Dev workflows must **not** match prod group |
 
@@ -185,16 +188,16 @@ The token is short-lived. Generate a new one if registration fails with an expir
 
 GitHub repo name is **`plys-internal-hub-service-api`** (not `plys-internal-hub-serivce-api`). Paste into **Workflow access** when configuring each runner group.
 
-**`plys-dev-runners`** (`refs/heads/develop`, 21 workflows):
+**`plys-dev-runners`** (22 workflows — 21 app monorepos on `refs/heads/develop` + 1 monitoring on `refs/heads/main`):
 
 ```
-PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.api-gateway.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.identity-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.business-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.consultant-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.internal-admin-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.internal-task-reviewer-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.finance-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.notifications-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.platform-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.ai-agents-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.ai-model-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-dev-internal-hub.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-dev-internal-admin-hub.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-dev-internal-task-reviewer.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-dev-all.yml@refs/heads/develop, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-ployos-app.yml@refs/heads/develop, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-lonaos-app.yml@refs/heads/develop, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-ployos-marketing.yml@refs/heads/develop, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-lonaos-marketing.yml@refs/heads/develop, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-all.yml@refs/heads/develop
+PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.api-gateway.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.identity-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.business-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.consultant-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.internal-admin-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.internal-task-reviewer-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.finance-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.notifications-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.platform-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.ai-agents-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-dev.ai-model-service.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-dev-internal-hub.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-dev-internal-admin-hub.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-dev-internal-task-reviewer.yml@refs/heads/develop, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-dev-all.yml@refs/heads/develop, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-ployos-app.yml@refs/heads/develop, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-lonaos-app.yml@refs/heads/develop, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-ployos-marketing.yml@refs/heads/develop, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-lonaos-marketing.yml@refs/heads/develop, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-dev-all.yml@refs/heads/develop, PLYS-NETWORK/plys-dev-ops/.github/workflows/deploy-dev.yml@refs/heads/main
 ```
 
-**`plys-prod-runners`** (`refs/heads/main`, 21 workflows):
+**`plys-prod-runners`** (`refs/heads/main`, 22 workflows):
 
 ```
-PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.api-gateway.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.identity-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.business-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.consultant-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.internal-admin-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.internal-task-reviewer-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.finance-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.notifications-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.platform-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.ai-agents-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.ai-model-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-prod-internal-hub.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-prod-internal-admin-hub.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-prod-internal-task-reviewer.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-prod-all.yml@refs/heads/main, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-ployos-app.yml@refs/heads/main, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-lonaos-app.yml@refs/heads/main, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-ployos-marketing.yml@refs/heads/main, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-lonaos-marketing.yml@refs/heads/main, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-all.yml@refs/heads/main
+PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.api-gateway.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.identity-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.business-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.consultant-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.internal-admin-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.internal-task-reviewer-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.finance-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.notifications-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.platform-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.ai-agents-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub-service-api/.github/workflows/deploy-prod.ai-model-service.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-prod-internal-hub.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-prod-internal-admin-hub.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-prod-internal-task-reviewer.yml@refs/heads/main, PLYS-NETWORK/plys-internal-hub/.github/workflows/deploy-prod-all.yml@refs/heads/main, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-ployos-app.yml@refs/heads/main, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-lonaos-app.yml@refs/heads/main, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-ployos-marketing.yml@refs/heads/main, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-lonaos-marketing.yml@refs/heads/main, PLYS-NETWORK/plys-monorepo-webapps/.github/workflows/deploy-prod-all.yml@refs/heads/main, PLYS-NETWORK/plys-dev-ops/.github/workflows/deploy-prod.yml@refs/heads/main
 ```
 
 ---
@@ -402,7 +405,9 @@ Conversion script (re-run after adding new deploy workflows): `scripts/convert-o
 | 1 | `plys-internal-hub-service-api` | Deploy Dev | `plys-dev-runners` |
 | 2 | `plys-internal-hub` | Deploy Dev (×3 or `deploy-dev-all`) | `plys-dev-runners` |
 | 3 | `plys-monorepo-webapps` | Deploy Dev (×4 or `deploy-dev-all`) | `plys-dev-runners` |
-| 4 | Each repo | Deploy Prod (manual, type `deploy`) | `plys-prod-runners` |
+| 4 | `plys-dev-ops` | Deploy monitoring — Dev (after app logs exist) | `plys-dev-runners` |
+| 5 | Each app repo | Deploy Prod (manual, type `deploy`) | `plys-prod-runners` |
+| 6 | `plys-dev-ops` | Deploy monitoring — Prod (type `deploy`) | `plys-prod-runners` |
 
 ---
 
@@ -427,6 +432,7 @@ Keep these as secrets when needed:
 | `REDIS_PASSWORD` | Rendered into app env files |
 | API keys / OAuth secrets / signing secrets | Runtime secrets |
 | `GHCR_PULL_TOKEN` | Keep only if the VPS must pull private GHCR images that `GITHUB_TOKEN` cannot access |
+| `OPENOBSERVE_ROOT_PASSWORD` | `plys-dev-ops` monitoring deploy only — unique per GitHub environment |
 
 Move non-sensitive constants to GitHub environment variables or hard-coded workflow env:
 
@@ -440,7 +446,7 @@ Move non-sensitive constants to GitHub environment variables or hard-coded workf
 ## 9. Safety controls
 
 - Use separate runner **groups** (`plys-dev-runners` / `plys-prod-runners`) and **labels** (`plys-dev-vps` / `plys-prod-vps`) for dev and prod.
-- Restrict each group to the three deploy repositories (Section 4.3–4.4).
+- Restrict each group to the four deploy repositories: three app monorepos + `plys-dev-ops` (Section 4.3–4.4).
 - Restrict workflow access to deploy workflows on the correct branch when your plan supports it.
 - Keep `environment: production` approval rules.
 - Use workflow `concurrency` so two deploys cannot update the same `/apps/.../current` directory at once.
