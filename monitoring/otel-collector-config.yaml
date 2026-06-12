@@ -10,13 +10,16 @@ receivers:
         endpoint: 0.0.0.0:4318
 
   filelog:
+    # PM2 default: {service}-out-{id}.log / {service}-error-{id}.log (also plain -out.log)
     include:
-      - /host/internal-hub-be/*/logs/*-out.log
-      - /host/internal-hub-be/*/logs/*-error.log
-      - /host/internal-hub-fe/*/logs/*-out.log
-      - /host/internal-hub-fe/*/logs/*-error.log
-      - /host/plys-webapps/*/logs/*-out.log
-      - /host/plys-webapps/*/logs/*-error.log
+      - /host/internal-hub-be/*/logs/*-out*.log
+      - /host/internal-hub-be/*/logs/*-error*.log
+      - /host/internal-hub-fe/*/logs/*-out*.log
+      - /host/internal-hub-fe/*/logs/*-error*.log
+      - /host/plys-webapps/*/logs/*-out*.log
+      - /host/plys-webapps/*/logs/*-error*.log
+    exclude:
+      - /host/*/logs/*.log.gz
     start_at: end
     poll_interval: 500ms
     include_file_path: true
@@ -24,7 +27,7 @@ receivers:
     operators:
       - type: regex_parser
         id: parse_log_path
-        regex: '^/host/(?P<service_namespace>[^/]+)/(?P<deploy_env>[^/]+)/logs/(?P<service_name>[^-]+)-(?P<log_stream>out|error)\.log$'
+        regex: '^/host/(?P<service_namespace>[^/]+)/(?P<deploy_env>[^/]+)/logs/(?P<service_name>.+)-(?P<log_stream>out|error)(?:-(?P<pm2_id>\d+))?\.log$'
         parse_from: attributes["log.file.path"]
         on_error: send_quiet
 

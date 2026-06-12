@@ -248,7 +248,7 @@ curl -sf -u "huuphuc9410@gmail.com:${ZO_ROOT_USER_PASSWORD}" \
   -d '{"level":"info","message":"auth smoke test"}' \
   "http://127.0.0.1:5080/api/plys/default/_json" && echo " ingest OK"
 
-ls /apps/internal-hub-be/dev/logs/api-gateway-out.log 2>/dev/null && echo " backend logs present"
+ls /apps/internal-hub-be/dev/logs/api-gateway-out*.log 2>/dev/null && echo " backend logs present"
 ```
 
 **In browser:** `https://observe-dev.plyshub.space` or `https://observe.plyshub.space` — login with root email + environment password.
@@ -284,7 +284,7 @@ See also [All-in-one deploy](../deploy-all-in-one-vps/01-deploy.md).
 | `internal-hub-fe` | `internal-hub`, `internal-admin-hub`, `internal-task-reviewer` |
 | `internal-hub-be` | `api-gateway`, `identity-service`, `business-service`, `consultant-service`, `internal-admin-service`, `internal-task-reviewer-service`, `finance-service`, `notifications-service`, `platform-service`, `ai-agents-service` |
 
-**Phase 1 (filelog):** PM2 logs at `/apps/{bundle}/{dev|prod}/logs/{service}-{out|error}.log`.
+**Phase 1 (filelog):** PM2 logs at `/apps/{bundle}/{dev|prod}/logs/{service}-{out|error}[-{id}].log` (collector matches both plain and PM2 instance-id suffixes).
 
 ---
 
@@ -320,7 +320,8 @@ Verify Docker host gateway: `ip route | grep default` (often `172.17.0.1`).
 | Symptom | Fix |
 |---------|-----|
 | UI login fails | First boot only — clear `/apps/monitoring/data`, redeploy workflow |
-| Empty log streams | `ls /apps/internal-hub-be/dev/logs/` (or `prod/logs/`) — deploy apps first |
+| Empty log streams | `ls /apps/internal-hub-be/dev/logs/` (or `prod/logs/`) — deploy apps first; expect `*-out-*.log` from PM2 |
+| Dashboard **stream not found** | Redeploy monitoring after `otel-collector-config.yaml` update; generate traffic (`curl` health + use apps); confirm org **`plys`** |
 | Collector 401 | `docker compose -p plys-monitoring logs otel-collector` — check `OPENOBSERVE_AUTH_B64` |
 | Wrong environment data | On combined VPS, filter by `deployment_environment`; on dedicated VPS use matching observe hostname |
 | Port conflict | `ss -tlnp \| grep 5080` — not `:3100`/`:3200` (internal-hub FE) |

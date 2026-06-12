@@ -12,11 +12,19 @@ import { dashboardV8, sqlPanel } from '../monitoring/dashboards/_panel-helper.mj
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'monitoring', 'dashboards');
 
+/** Assign 1-based layout.i per panel (OpenObserve v8 requires i64, not 0). */
+function panels(...specs) {
+  return specs.map((spec, index) =>
+    sqlPanel({ ...spec, layout: { ...spec.layout, i: index + 1 } }),
+  );
+}
+
 const platform = dashboardV8({
+  dashboardId: '7435756711840870401',
   title: 'Plys Platform KPIs',
   description: 'Ops KPIs: throughput, errors, latency, versions (org plys)',
-  panels: [
-    sqlPanel({
+  panels: panels(
+    {
       id: 'platform_request_volume',
       title: 'Request volume (5m)',
       type: 'line',
@@ -26,9 +34,9 @@ FROM "api-gateway"
 WHERE log_type = 'access'
 GROUP BY ts
 ORDER BY ts ASC`,
-      layout: { x: 0, y: 0, w: 48, h: 15, i: 0 },
-    }),
-    sqlPanel({
+      layout: { x: 0, y: 0, w: 48, h: 15 },
+    },
+    {
       id: 'platform_error_rate',
       title: '5xx error rate %',
       type: 'line',
@@ -39,9 +47,9 @@ FROM "api-gateway"
 WHERE log_type = 'access'
 GROUP BY ts
 ORDER BY ts ASC`,
-      layout: { x: 48, y: 0, w: 48, h: 15, i: 1 },
-    }),
-    sqlPanel({
+      layout: { x: 48, y: 0, w: 48, h: 15 },
+    },
+    {
       id: 'platform_p95_latency',
       title: 'p95 latency by path (top 10)',
       type: 'table',
@@ -54,9 +62,9 @@ WHERE log_type = 'access' AND duration_ms IS NOT NULL AND path IS NOT NULL
 GROUP BY path
 ORDER BY p95_ms DESC
 LIMIT 10`,
-      layout: { x: 0, y: 15, w: 48, h: 15, i: 2 },
-    }),
-    sqlPanel({
+      layout: { x: 0, y: 15, w: 48, h: 15 },
+    },
+    {
       id: 'platform_http_errors_by_service',
       title: '4xx/5xx by service',
       type: 'bar',
@@ -68,9 +76,9 @@ FROM "default"
 WHERE log_type = 'access' AND status_code >= 400
 GROUP BY service
 ORDER BY server_errors DESC`,
-      layout: { x: 48, y: 15, w: 48, h: 15, i: 3 },
-    }),
-    sqlPanel({
+      layout: { x: 48, y: 15, w: 48, h: 15 },
+    },
+    {
       id: 'platform_grpc_failures',
       title: 'gRPC upstream failures',
       type: 'line',
@@ -80,9 +88,9 @@ FROM "default"
 WHERE log_type = 'grpc' AND outcome = 'failure'
 GROUP BY ts
 ORDER BY ts ASC`,
-      layout: { x: 0, y: 30, w: 48, h: 15, i: 4 },
-    }),
-    sqlPanel({
+      layout: { x: 0, y: 30, w: 48, h: 15 },
+    },
+    {
       id: 'platform_active_versions',
       title: 'Active service versions',
       type: 'table',
@@ -92,9 +100,9 @@ FROM "default"
 WHERE service_version IS NOT NULL
 GROUP BY service, service_version, libraries_version
 ORDER BY service, service_version DESC`,
-      layout: { x: 48, y: 30, w: 48, h: 15, i: 5 },
-    }),
-    sqlPanel({
+      layout: { x: 48, y: 30, w: 48, h: 15 },
+    },
+    {
       id: 'platform_errors_by_version',
       title: 'Errors by service version',
       type: 'bar',
@@ -105,16 +113,17 @@ WHERE log_type = 'error'
 GROUP BY service, service_version
 ORDER BY errors DESC
 LIMIT 20`,
-      layout: { x: 0, y: 45, w: 96, h: 15, i: 6 },
-    }),
-  ],
+      layout: { x: 0, y: 45, w: 96, h: 15 },
+    },
+  ),
 });
 
 const securityAudit = dashboardV8({
+  dashboardId: '7435756711840870402',
   title: 'Plys Security & Audit KPIs',
   description: 'Auth funnel, admin actions, failed login offenders (org plys)',
-  panels: [
-    sqlPanel({
+  panels: panels(
+    {
       id: 'audit_login_outcomes',
       title: 'Login success vs failure',
       type: 'bar',
@@ -124,9 +133,9 @@ FROM "identity-service"
 WHERE log_type = 'audit' AND action = 'login'
 GROUP BY outcome
 ORDER BY events DESC`,
-      layout: { x: 0, y: 0, w: 48, h: 15, i: 0 },
-    }),
-    sqlPanel({
+      layout: { x: 0, y: 0, w: 48, h: 15 },
+    },
+    {
       id: 'audit_failed_login_reasons',
       title: 'Failed login by reason',
       type: 'table',
@@ -136,9 +145,9 @@ FROM "identity-service"
 WHERE log_type = 'audit' AND action = 'login' AND outcome = 'failure'
 GROUP BY reason
 ORDER BY failures DESC`,
-      layout: { x: 48, y: 0, w: 48, h: 15, i: 1 },
-    }),
-    sqlPanel({
+      layout: { x: 48, y: 0, w: 48, h: 15 },
+    },
+    {
       id: 'audit_register_funnel',
       title: 'Register / verify_email funnel',
       type: 'line',
@@ -150,9 +159,9 @@ FROM "identity-service"
 WHERE log_type = 'audit' AND action IN ('register', 'verify_email')
 GROUP BY ts
 ORDER BY ts ASC`,
-      layout: { x: 0, y: 15, w: 48, h: 15, i: 2 },
-    }),
-    sqlPanel({
+      layout: { x: 0, y: 15, w: 48, h: 15 },
+    },
+    {
       id: 'audit_admin_actions',
       title: 'Admin actions timeline',
       type: 'line',
@@ -162,9 +171,9 @@ FROM "internal-admin-service"
 WHERE log_type = 'audit' AND event_category = 'admin'
 GROUP BY ts, action
 ORDER BY ts ASC`,
-      layout: { x: 48, y: 15, w: 48, h: 15, i: 3 },
-    }),
-    sqlPanel({
+      layout: { x: 48, y: 15, w: 48, h: 15 },
+    },
+    {
       id: 'audit_failed_login_ips',
       title: 'Top IPs with failed logins',
       type: 'table',
@@ -175,16 +184,17 @@ WHERE log_type = 'audit' AND action = 'login' AND outcome = 'failure' AND ip_add
 GROUP BY ip_address
 ORDER BY failures DESC
 LIMIT 15`,
-      layout: { x: 0, y: 30, w: 96, h: 15, i: 4 },
-    }),
-  ],
+      layout: { x: 0, y: 30, w: 96, h: 15 },
+    },
+  ),
 });
 
 const business = dashboardV8({
+  dashboardId: '7435756711840870403',
   title: 'Plys Business KPIs',
   description: 'Finance, projects, notifications volume (org plys)',
-  panels: [
-    sqlPanel({
+  panels: panels(
+    {
       id: 'biz_withdraw_volume',
       title: 'Withdraw create / cancel',
       type: 'line',
@@ -196,9 +206,9 @@ FROM "finance-service"
 WHERE log_type = 'audit' AND action IN ('withdraw_create', 'withdraw_cancel')
 GROUP BY ts
 ORDER BY ts ASC`,
-      layout: { x: 0, y: 0, w: 48, h: 15, i: 0 },
-    }),
-    sqlPanel({
+      layout: { x: 0, y: 0, w: 48, h: 15 },
+    },
+    {
       id: 'biz_webhook_outcomes',
       title: 'Stripe / Polar webhooks',
       type: 'bar',
@@ -208,9 +218,9 @@ FROM "finance-service"
 WHERE log_type = 'audit' AND action IN ('webhook_stripe', 'webhook_polar')
 GROUP BY action, outcome
 ORDER BY events DESC`,
-      layout: { x: 48, y: 0, w: 48, h: 15, i: 1 },
-    }),
-    sqlPanel({
+      layout: { x: 48, y: 0, w: 48, h: 15 },
+    },
+    {
       id: 'biz_project_publish',
       title: 'Project publish / republish',
       type: 'line',
@@ -222,9 +232,9 @@ FROM "business-service"
 WHERE log_type = 'audit' AND action IN ('project_publish', 'project_republish')
 GROUP BY ts
 ORDER BY ts ASC`,
-      layout: { x: 0, y: 15, w: 48, h: 15, i: 2 },
-    }),
-    sqlPanel({
+      layout: { x: 0, y: 15, w: 48, h: 15 },
+    },
+    {
       id: 'biz_notifications',
       title: 'Notification send volume',
       type: 'line',
@@ -234,9 +244,9 @@ FROM "notifications-service"
 WHERE log_type = 'audit' AND action = 'notification_send'
 GROUP BY ts, outcome
 ORDER BY ts ASC`,
-      layout: { x: 48, y: 15, w: 48, h: 15, i: 3 },
-    }),
-    sqlPanel({
+      layout: { x: 48, y: 15, w: 48, h: 15 },
+    },
+    {
       id: 'biz_settlement_triggers',
       title: 'Settlement triggers',
       type: 'bar',
@@ -246,9 +256,9 @@ FROM "finance-service"
 WHERE log_type = 'audit' AND action = 'settlement_trigger' AND outcome = 'success'
 GROUP BY ts
 ORDER BY ts ASC`,
-      layout: { x: 0, y: 30, w: 96, h: 15, i: 4 },
-    }),
-  ],
+      layout: { x: 0, y: 30, w: 96, h: 15 },
+    },
+  ),
 });
 
 for (const [name, payload] of [

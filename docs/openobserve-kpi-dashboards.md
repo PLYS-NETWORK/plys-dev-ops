@@ -19,8 +19,9 @@ node scripts/generate-kpi-dashboards.mjs
 ## Prerequisites
 
 1. Backend deployed with audit logging (Pino + `AppLogger.audit()`).
-2. OpenObserve running on the VPS ([`vps-started/06-monitoring-openobserve.md`](vps-started/06-monitoring-openobserve.md)).
-3. At least 10+ minutes of traffic so panels have data.
+2. OpenObserve + OTEL collector running on the VPS ([`vps-started/06-monitoring-openobserve.md`](vps-started/06-monitoring-openobserve.md)) — collector must match PM2 log names (`{service}-out-{id}.log`).
+3. Traffic after monitoring deploy (collector uses `start_at: end`; only **new** log lines are shipped).
+4. At least 10+ minutes of traffic so panels have data.
 
 ---
 
@@ -28,11 +29,18 @@ node scripts/generate-kpi-dashboards.mjs
 
 1. Sign in to **https://observe-dev.plyshub.space** with `huuphuc9410@gmail.com` and the dev `OPENOBSERVE_ROOT_PASSWORD`.
 2. Confirm org **`plys`** is selected.
-3. **Dashboards** → create folder **`plys-kpis`** (or use an existing folder).
+3. **Dashboards** → **New folder** → name **`plys-kpis`** (folder must exist before import — missing folder causes **422**).
 4. For each JSON file in `monitoring/dashboards/`:
    - **Import** → upload the file.
    - Choose folder **`plys-kpis`**.
 5. Open each dashboard and verify panels return rows (adjust time range to **Last 15 minutes** or **Last 1 hour**).
+
+If import fails:
+
+| Error | Fix |
+|-------|-----|
+| **Dashboard ID is required** / **missing layout.i** | Regenerate: `node scripts/generate-kpi-dashboards.mjs` — `layout.i` must be integer ≥ 1 (not `0`, not a string) |
+| **422** on import | Same regenerate step; also ensure target folder exists in OpenObserve (**Dashboards → create `plys-kpis` folder** before import) |
 
 ---
 

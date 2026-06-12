@@ -11,7 +11,7 @@ KPI dashboards (import JSON into org `plys`): [docs/openobserve-kpi-dashboards.m
 | File | Purpose |
 |------|---------|
 | [docker-compose.yml](docker-compose.yml) | OpenObserve UI `:5080`, OTEL Collector `:4317`/`:4318` (loopback) |
-| [otel-collector-config.yaml](otel-collector-config.yaml) | OTLP + PM2 filelog → OpenObserve org `plys` |
+| [otel-collector-config.yaml](otel-collector-config.yaml) | OTLP + PM2 filelog (`*-out-*.log` / `*-error-*.log`) → OpenObserve org `plys` |
 | [env.example](env.example) | Non-secret template; password filled by CI |
 | [dashboards/](dashboards/) | Importable OpenObserve KPI dashboard JSON (`platform-kpis`, `security-audit-kpis`, `business-kpis`) |
 

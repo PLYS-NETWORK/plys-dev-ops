@@ -1,10 +1,10 @@
 {
   "version": 8,
+  "dashboardId": "7435756711840870401",
   "title": "Plys Platform KPIs",
   "description": "Ops KPIs: throughput, errors, latency, versions (org plys)",
   "role": "",
   "owner": "",
-  "created": 0,
   "tabs": [
     {
       "tabId": "tab-kpis",
@@ -50,8 +50,10 @@
             "y": 0,
             "w": 48,
             "h": 15,
-            "i": 0
-          }
+            "i": 1
+          },
+          "htmlContent": "",
+          "markdownContent": ""
         },
         {
           "id": "platform_error_rate",
@@ -93,8 +95,10 @@
             "y": 0,
             "w": 48,
             "h": 15,
-            "i": 1
-          }
+            "i": 2
+          },
+          "htmlContent": "",
+          "markdownContent": ""
         },
         {
           "id": "platform_p95_latency",
@@ -136,8 +140,10 @@
             "y": 15,
             "w": 48,
             "h": 15,
-            "i": 2
-          }
+            "i": 3
+          },
+          "htmlContent": "",
+          "markdownContent": ""
         },
         {
           "id": "platform_http_errors_by_service",
@@ -179,8 +185,10 @@
             "y": 15,
             "w": 48,
             "h": 15,
-            "i": 3
-          }
+            "i": 4
+          },
+          "htmlContent": "",
+          "markdownContent": ""
         },
         {
           "id": "platform_grpc_failures",
@@ -222,8 +230,10 @@
             "y": 30,
             "w": 48,
             "h": 15,
-            "i": 4
-          }
+            "i": 5
+          },
+          "htmlContent": "",
+          "markdownContent": ""
         },
         {
           "id": "platform_active_versions",
@@ -265,8 +275,10 @@
             "y": 30,
             "w": 48,
             "h": 15,
-            "i": 5
-          }
+            "i": 6
+          },
+          "htmlContent": "",
+          "markdownContent": ""
         },
         {
           "id": "platform_errors_by_version",
@@ -308,8 +320,10 @@
             "y": 45,
             "w": 96,
             "h": 15,
-            "i": 6
-          }
+            "i": 7
+          },
+          "htmlContent": "",
+          "markdownContent": ""
         }
       ]
     }
@@ -317,5 +331,9 @@
   "variables": {
     "list": [],
     "showDynamicFilters": false
+  },
+  "defaultDatetimeDuration": {
+    "type": "relative",
+    "relativeTimePeriod": "15m"
   }
 }
