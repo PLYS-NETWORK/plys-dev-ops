@@ -1,15 +1,17 @@
 # VPS End-to-End Deployment Guide (single VPS — dev + prod)
 
+**Track:** [deploy-all-in-one-vps](README.md) · [Prerequisites](../vps-started/01-prerequisites.md) first · [Docs index](../README.md)
+
 Deploy **dev and prod** on **one VPS** (both Postgres/Redis instances, `/apps/*/dev` and `/apps/*/prod`).
 
 | Guide | Use when |
 |-------|----------|
-| **[vps-deployment-dev.md](vps-deployment-dev.md)** | Dedicated **dev-only** VPS |
-| **[vps-deployment-prod.md](vps-deployment-prod.md)** | Dedicated **prod-only** VPS |
-| **[infra/README.md](infra/README.md)** | `docker-compose` + `.env.data` templates for `/apps` |
-| **[vps-monitoring-openobserve.md](vps-monitoring-openobserve.md)** | OpenObserve + OTEL Collector (any VPS) |
-| **[vps-data-tools-adminer-redis-insight.md](vps-data-tools-adminer-redis-insight.md)** | Adminer + Redis Insight (Postgres/Redis GUI) |
-| **[vps-cleanup-and-reset.md](vps-cleanup-and-reset.md)** | Full cleanup, DB/Redis volume reset |
+| **[Dev deploy](../deploy-dev/01-deploy.md)** | Dedicated **dev-only** VPS |
+| **[Prod deploy](../deploy-prod/01-deploy.md)** | Dedicated **prod-only** VPS |
+| **[Prerequisites](../vps-started/01-prerequisites.md)** | Node, Docker, nginx, PM2, pnpm (run first) |
+| **[Infra templates](../vps-started/infra/README.md)** | `docker-compose` + `.env.data` templates for `/apps` |
+| **[Adminer + Redis Insight](../vps-started/04-data-tools-adminer-redis.md)** | Adminer + Redis Insight (Postgres/Redis GUI) |
+| **[Cleanup and reset](../vps-started/03-cleanup-and-reset.md)** | Full cleanup, DB/Redis volume reset |
 
 > **Legacy:** [refactor-fullstack-structure-guide.md](../refactor-fullstack-structure-guide.md), [quick-fix-full-setup-guide.md](../quick-fix-full-setup-guide.md)
 
@@ -28,21 +30,19 @@ Per-repo CI details:
 | `/apps/plys-webapps/{dev,prod}/current` | plys-monorepo-webapps | 4 Next.js apps (Docker + PM2) |
 | `/apps/internal-hub-fe/{dev,prod}/current` | plys-internal-hub | 3 Next.js apps |
 | `/apps/internal-hub-be/{dev,prod}/current` | plys-internal-hub-serivce-api | api-gateway + 9 gRPC services |
-| `/apps/docker-compose.yml` | [docs/infra/](infra/README.md) | Postgres + Redis (dev **and** prod) |
-
-Monitoring is **not** covered here — see [vps-monitoring-openobserve.md](vps-monitoring-openobserve.md).
+| `/apps/docker-compose.yml` | [docs/vps-started/infra/](../vps-started/infra/README.md) | Postgres + Redis (dev **and** prod) |
 
 Postgres/Redis are **not** started by application compose files on the VPS; they run from `/apps/docker-compose.yml`.
 
 ### Conventions
 
-All command blocks below are run **on the VPS** unless labeled otherwise. Copy compose/monitoring files with `sudo nano` (templates live under `docs/` in the repo you maintain off-server).
+All command blocks below are run **on the VPS** unless labeled otherwise. Copy compose files with `sudo nano` (templates live under `docs/` in the repo you maintain off-server).
 
 ---
 
 ## 1. Full clean VPS (greenfield reset)
 
-**Warning:** destructive. For step-by-step cleanup and **database-only** reset (remove volume + recreate), use **[vps-cleanup-and-reset.md](vps-cleanup-and-reset.md)**.
+**Warning:** destructive. For step-by-step cleanup and **database-only** reset (remove volume + recreate), use **[Cleanup and reset](../vps-started/03-cleanup-and-reset.md)**.
 
 Summary below (combined dev + prod on one VPS). Skip to [Section 1.5](#15-canonical-db--redis-naming) if the VPS is already empty.
 
@@ -111,7 +111,7 @@ sudo rm -rf \
   /apps/marketing-ployos /apps/ployos /apps/lonaos \
   /apps/ployos-app /apps/lonaos-app \
   /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be \
-  /apps/environments /apps/monitoring
+  /apps/environments
 
 # Keep /apps as the root; remove old compose if present
 sudo rm -f /apps/docker-compose.yml /apps/.env.data
@@ -134,18 +134,18 @@ Source of truth: `plys-internal-hub-serivce-api/infra/env/.env.dev` and `.env.pr
 | `REDIS_KEY_PREFIX` | `app:dev:` | `app:prod:` |
 | `THROTTLE_REDIS_PREFIX` | `throttle:dev:` | `throttle:prod:` |
 
-#### Step 1.5.1 — Copy templates from `docs/infra/` to `/apps`
+#### Step 1.5.1 — Copy templates from `docs/vps-started/infra/` to `/apps`
 
-All templates: **[docs/infra/README.md](infra/README.md)**
+All templates: **[docs/vps-started/infra/README.md](../vps-started/infra/README.md)**
 
 **On VPS:**
 
 ```bash
 sudo nano /apps/docker-compose.yml
-# Paste full contents from docs/infra/docker-compose.data.yml (combined VPS), save.
+# Paste full contents from docs/vps-started/infra/docker-compose.data.yml (combined VPS), save.
 
 sudo nano /apps/.env.data
-# Paste docs/infra/env.data.example, replace every CHANGE_ME with passwords from:
+# Paste docs/vps-started/infra/env.data.example, replace every CHANGE_ME with passwords from:
 #   openssl rand -hex 24
 ```
 
@@ -197,7 +197,7 @@ Run as your **deploy user** (not only via `sudo`), so Compose can read `/apps/.e
 
 Expected: six containers `Up` — `postgres-dev`, `postgres-prod`, `redis-dev`, `redis-prod`, `adminer`, `redisinsight`.
 
-Browser GUI (optional): [vps-data-tools-adminer-redis-insight.md](vps-data-tools-adminer-redis-insight.md).
+Browser GUI (optional): [Adminer + Redis Insight](../vps-started/04-data-tools-adminer-redis.md).
 
 #### Step 1.5.4 — Verify DB and Redis
 
@@ -228,20 +228,25 @@ In **GitHub → plys-internal-hub-serivce-api → Settings → Environments**:
 | `production` | `DB_PASSWORD` | `POSTGRES_PROD_PASSWORD` |
 | `production` | `REDIS_PASSWORD` | `REDIS_PROD_PASSWORD` |
 
-The deploy workflow injects these into rendered `.env.dev` / `.env.prod` as `DB_PASSWORD` and `REDIS_PASSWORD` (must match what Postgres/Redis use above).
+The deploy workflow injects these into rendered `.env.dev` / `.env.prod` as `DB_PASSWORD` and `REDIS_PASSWORD` (must match what Postgres/Redis use above). With self-hosted runners, the workflow runs on the target VPS and writes the rendered files locally.
 
 ### 1.6 Recreate app directories
 
-**On VPS:**
+Same paths as [Prerequisites §4](../vps-started/01-prerequisites.md#4-create-apps-layout) (combined layout) or [§3.5.4](../vps-started/01-prerequisites.md#354-create-deploy-directories-and-grant-runner-access) (runner-owned).
+
+**On VPS** — after a full clean (§1), recreate then set ownership for whoever deploys:
 
 ```bash
+sudo mkdir -p /apps/source
 sudo mkdir -p /apps/plys-webapps/{dev,prod}/{current,logs}
 sudo mkdir -p /apps/internal-hub-fe/{dev,prod}/{current,logs}
 sudo mkdir -p /apps/internal-hub-be/{dev,prod}/{current,logs}
-sudo mkdir -p /apps/monitoring/{current,data}
 
-# Deploy user must write logs and receive CI uploads
-sudo chown -R "$USER:$USER" /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be /apps/monitoring
+# Self-hosted runner:
+# sudo chown -R github-runner:github-runner /apps/source /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be
+
+# Manual deploy from SSH user:
+sudo chown -R "$USER:$USER" /apps/source /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be
 
 find /apps -maxdepth 3 -type d | sort
 ```
@@ -264,29 +269,28 @@ sudo systemctl reload nginx
 
 ---
 
-## 1b. Reset GitHub Actions ↔ VPS sync
+## 1b. Reset GitHub Actions runner ↔ VPS sync
 
 ### Deploy flow (monorepos only)
 
 1. Build image → push GHCR  
 2. `scripts/render-deploy-env.mjs` merges `infra/env/.env.{dev|prod}` + environment secrets  
-3. SCP `deploy-package/*` → `{APP_DIR}/current`  
-4. SSH: `docker compose up` + PM2 reload + health check  
+3. Copy `deploy-package/*` locally to `{APP_DIR}/current` on the VPS runner  
+4. Run `docker compose up` + PM2 reload + health check locally on the VPS
 
 ### GitHub cleanup checklist
 
 - **Disable** deploy workflows in legacy repos (`ployos/`, `lona/`, `ployos-marketing/`, `lonaos-marketing/`) — they target `/apps/ployos-app/` and `/apps/environments/`.
 - Align `IMAGE_REGISTRY` across three monorepos (`ghcr.io/plys-network/...` vs `ghcr.io/plysnetwork/...`).
-- Shared secrets per environment: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_SSH_PORT`, `GHCR_PULL_TOKEN`.
+- Install self-hosted runners on the target VPS hosts — [Self-hosted runner](../vps-started/02-self-hosted-runner.md).
+- Remove `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, and `VPS_SSH_PORT` from deploy jobs after they run on self-hosted runners.
+- Keep `GHCR_PULL_TOKEN` only when the VPS runner must pull private GHCR images that `GITHUB_TOKEN` cannot access.
 
-### Command guide — VPS ready for CI
+### Command guide — VPS ready for self-hosted runner deploy
 
 **On VPS:**
 
 ```bash
-# GHCR pull (use a PAT with read:packages)
-echo "$GHCR_PULL_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin
-
 pm2 list
 ls -la /apps/plys-webapps/dev/current      # empty until first deploy
 ls -la /apps/internal-hub-be/dev/current   # empty until first deploy
@@ -295,15 +299,14 @@ test ! -e /apps/environments && echo "OK: /apps/environments removed"
 
 ### Command guide — re-sync order (GitHub UI)
 
-Run workflows in this order (branch `develop` unless you choose another):
+Run workflows in this order. Dev jobs use runner group `plys-dev-runners`; prod jobs use `plys-prod-runners` (see [Self-hosted runner §7](../vps-started/02-self-hosted-runner.md#7-workflow-changes-three-monorepos)).
 
-| Step | Repo | Workflow (examples) | VPS path after success |
-|------|------|---------------------|-------------------------|
-| 1 | `plys-internal-hub-serivce-api` | **Actions → Deploy Dev** (`deploy-dev.yml`) | `/apps/internal-hub-be/dev/current` populated |
-| 2 | `plys-internal-hub` | Deploy Dev — internal-hub, admin, reviewer | `/apps/internal-hub-fe/dev/current` |
-| 3 | `plys-monorepo-webapps` | Deploy Dev — four apps | `/apps/plys-webapps/dev/current` |
-| 4 | Each repo | **Deploy Prod** workflows (manual, type `deploy`) | `*/prod/current` |
-| 5 | `plys-dev-ops` | **Deploy monitoring — Dev** (GitHub Actions) | `/apps/monitoring/current` (optional) |
+| Step | Repo | Workflow (examples) | Runner | VPS path after success |
+|------|------|---------------------|--------|-------------------------|
+| 1 | `plys-internal-hub-serivce-api` | **Actions → Deploy Dev** (`deploy-dev.yml`) | `plys-dev-vps` | `/apps/internal-hub-be/dev/current` populated |
+| 2 | `plys-internal-hub` | Deploy Dev — internal-hub, admin, reviewer | `plys-dev-vps` | `/apps/internal-hub-fe/dev/current` |
+| 3 | `plys-monorepo-webapps` | Deploy Dev — four apps | `plys-dev-vps` | `/apps/plys-webapps/dev/current` |
+| 4 | Each repo | **Deploy Prod** workflows (manual, type `deploy`) | `plys-prod-vps` | `*/prod/current` |
 
 **On VPS** — after step 1 (backend):
 
@@ -315,7 +318,7 @@ ls /apps/internal-hub-be/dev/current/.env.dev
 ### Drift rules
 
 - Do not hand-edit `.env.dev` / `.env.prod` on the VPS.  
-- On failure, re-run the GitHub workflow — do not restore old `current/` without matching secrets.
+- On failure, re-run the GitHub workflow on the matching self-hosted runner — do not restore old `current/` without matching secrets.
 
 ---
 
@@ -338,32 +341,29 @@ ls /apps/internal-hub-be/dev/current/.env.dev
 | `app.ployos.com` | `app` | A | DNS only |
 | `app-dev.ployos.com` | `app-dev` | A | DNS only |
 
-### 2.2 Zone: lona.run
+### 2.2 Zone: lonaos.com
 
 | FQDN | Name | Type | Proxy |
 |------|------|------|-------|
-| `lona.run` | `@` | A | DNS only |
-| `dev.lona.run` | `dev` | A | DNS only |
-| `app.lona.run` | `app` | A | DNS only |
-| `app-dev.lona.run` | `app-dev` | A | DNS only |
+| `lonaos.com` | `@` | A | DNS only |
+| `dev.lonaos.com` | `dev` | A | DNS only |
+| `app.lonaos.com` | `app` | A | DNS only |
+| `app-dev.lonaos.com` | `app-dev` | A | DNS only |
 
-### 2.3 Zone: lona.my
+### 2.3 Zone: plyshub.space
 
 | FQDN | Name | Type | Proxy |
 |------|------|------|-------|
-| `lona.my` | `@` | A | DNS only |
-| `dev.lona.my` | `dev` | A | DNS only |
-| `admin.lona.my` | `admin` | A | DNS only |
-| `admin-dev.lona.my` | `admin-dev` | A | DNS only |
-| `review.lona.my` | `review` | A | DNS only |
-| `review-dev.lona.my` | `review-dev` | A | DNS only |
-| `api.lona.my` | `api` | A | DNS only |
-| `api-dev.lona.my` | `api-dev` | A | DNS only |
-| `observe-dev.lona.my` | `observe-dev` | A | DNS only (dev VPS) |
-| `observe.lona.my` | `observe` | A | DNS only (prod VPS) |
-| `logs.lona.my` | `logs` | A | DNS only |
+| `plyshub.space` | `@` | A | DNS only |
+| `dev.plyshub.space` | `dev` | A | DNS only |
+| `admin.plyshub.space` | `admin` | A | DNS only |
+| `admin-dev.plyshub.space` | `admin-dev` | A | DNS only |
+| `review.plyshub.space` | `review` | A | DNS only |
+| `review-dev.plyshub.space` | `review-dev` | A | DNS only |
+| `api.plyshub.space` | `api` | A | DNS only |
+| `api-dev.plyshub.space` | `api-dev` | A | DNS only |
 
-Never proxy `api*`, `observe*`, `admin*`, `review*`, or `dev` / `*-dev` hosts.
+Never proxy `api*`, `admin*`, `review*`, or `dev` / `*-dev` hosts.
 
 ### 2.4 Zone settings
 
@@ -378,8 +378,8 @@ export VPS_IP="203.0.113.10"
 
 for host in \
   ployos.com dev.ployos.com app.ployos.com app-dev.ployos.com \
-  lona.run dev.lona.run app.lona.run app-dev.lona.run \
-  lona.my dev.lona.my admin.lona.my api.lona.my api-dev.lona.my observe-dev.lona.my observe.lona.my; do
+  lonaos.com dev.lonaos.com app.lonaos.com app-dev.lonaos.com \
+  plyshub.space dev.plyshub.space admin.plyshub.space api.plyshub.space api-dev.plyshub.space; do
   ip=$(dig +short "$host" A | tail -1)
   if [ "$ip" = "$VPS_IP" ]; then
     echo "OK  $host -> $ip"
@@ -397,51 +397,48 @@ done
 |--------|-----|------|---------|
 | `dev.ployos.com` | dev | 3001 | ployos-marketing |
 | `ployos.com` | prod | 3000 | ployos-marketing |
-| `dev.lona.run` | dev | 3011 | lonaos-marketing |
-| `lona.run` | prod | 3010 | lonaos-marketing |
+| `dev.lonaos.com` | dev | 3011 | lonaos-marketing |
+| `lonaos.com` | prod | 3010 | lonaos-marketing |
 | `app-dev.ployos.com` | dev | 3021 | ployos-app |
 | `app.ployos.com` | prod | 3020 | ployos-app |
-| `app-dev.lona.run` | dev | 3031 | lonaos-app |
-| `app.lona.run` | prod | 3030 | lonaos-app |
-| `dev.lona.my` | dev | 3101 | internal-hub |
-| `lona.my` | prod | 3100 | internal-hub |
-| `admin-dev.lona.my` | dev | 3201 | internal-admin-hub |
-| `admin.lona.my` | prod | 3200 | internal-admin-hub |
-| `review-dev.lona.my` | dev | 3301 | internal-task-reviewer |
-| `review.lona.my` | prod | 3300 | internal-task-reviewer |
-| `api-dev.lona.my` | dev | 4001 | api-gateway (+ nginx rewrite) |
-| `api.lona.my` | prod | 4000 | api-gateway (+ nginx rewrite) |
+| `app-dev.lonaos.com` | dev | 3031 | lonaos-app |
+| `app.lonaos.com` | prod | 3030 | lonaos-app |
+| `dev.plyshub.space` | dev | 3101 | internal-hub |
+| `plyshub.space` | prod | 3100 | internal-hub |
+| `admin-dev.plyshub.space` | dev | 3201 | internal-admin-hub |
+| `admin.plyshub.space` | prod | 3200 | internal-admin-hub |
+| `review-dev.plyshub.space` | dev | 3301 | internal-task-reviewer |
+| `review.plyshub.space` | prod | 3300 | internal-task-reviewer |
+| `api-dev.plyshub.space` | dev | 4001 | api-gateway (+ nginx rewrite) |
+| `api.plyshub.space` | prod | 4000 | api-gateway (+ nginx rewrite) |
 | gRPC | both | 5001–5009 | loopback only |
-| OpenObserve UI | — | **5080** | monitoring (loopback; nginx → observe*.lona.my) |
-| OTEL Collector HTTP | — | **4318** | loopback only (app OTLP, Phase 2) |
-| OTEL Collector gRPC | — | **4317** | loopback only |
-| Adminer (loopback) | both | **8080** | Postgres GUI — [vps-data-tools-adminer-redis-insight.md](vps-data-tools-adminer-redis-insight.md) |
+| Adminer (loopback) | both | **8080** | Postgres GUI — [Adminer + Redis Insight](../vps-started/04-data-tools-adminer-redis.md) |
 | Redis Insight (loopback) | both | **5540** | Redis GUI |
 
 Port audit before deploy:
 
 ```bash
-ss -tlnp | grep -E '3000|3100|3200|4000|5080|4317|4318'
+ss -tlnp | grep -E '3000|3100|3200|4000'
 ```
 
-### 3.1 API gateway — `api.lona.my` / `api-dev.lona.my`
+### 3.1 API gateway — `api.plyshub.space` / `api-dev.plyshub.space`
 
 Nest **api-gateway** uses global prefix `api` and version `v1` for **HTTP REST** only. Loopback listens on `/api/v1/...` at port **4000** (prod) or **4001** (dev).
 
-**Realtime notifications** use Socket.IO namespace **`/ws/notifications`** on the same gateway. Socket.IO serves **`/socket.io/`** at the server root — **not** under `/api`. Frontends connect to `wss://api-dev.lona.my/ws/notifications` (via engine at `/socket.io/`).
+**Realtime notifications** use Socket.IO namespace **`/ws/notifications`** on the same gateway. Socket.IO serves **`/socket.io/`** at the server root — **not** under `/api`. Frontends connect to `wss://api-dev.plyshub.space/ws/notifications` (via engine at `/socket.io/`).
 
 Full nginx rationale: [plys-internal-hub-serivce-api/docs/deployment/nginx-api-gateway.md](../plys-internal-hub-serivce-api/docs/deployment/nginx-api-gateway.md).
 
 Public REST bases **without** `/api` suffix:
 
-- `https://api.lona.my`
-- `https://api-dev.lona.my`
+- `https://api.plyshub.space`
+- `https://api-dev.plyshub.space`
 
-Nginx on `api*.lona.my` — **`/socket.io/` and `/ws/` before `location /`**:
+Nginx on `api*.plyshub.space` — **`/socket.io/` and `/ws/` before `location /`**:
 
 ```nginx
 location /socket.io/ {
-    proxy_pass http://127.0.0.1:4000;   # 4001 for api-dev.lona.my
+    proxy_pass http://127.0.0.1:4000;   # 4001 for api-dev.plyshub.space
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
@@ -468,7 +465,7 @@ location /ws/ {
 
 location / {
     rewrite ^/(.*)$ /api/$1 break;
-    proxy_pass http://127.0.0.1:4000;   # 4001 for api-dev.lona.my
+    proxy_pass http://127.0.0.1:4000;   # 4001 for api-dev.plyshub.space
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection 'upgrade';
@@ -483,20 +480,20 @@ location / {
 
 | Public request | Upstream |
 |----------------|----------|
-| `api.lona.my/v1/users` | `127.0.0.1:4000/api/v1/users` |
-| `api.lona.my/v1/gateway/health` | `127.0.0.1:4000/api/v1/gateway/health` |
-| `api.lona.my/socket.io/?EIO=4&transport=polling` | `127.0.0.1:4000/socket.io/...` (no `/api` rewrite) |
+| `api.plyshub.space/v1/users` | `127.0.0.1:4000/api/v1/users` |
+| `api.plyshub.space/v1/gateway/health` | `127.0.0.1:4000/api/v1/gateway/health` |
+| `api.plyshub.space/socket.io/?EIO=4&transport=polling` | `127.0.0.1:4000/socket.io/...` (no `/api` rewrite) |
 | Browser WS namespace `/ws/notifications` | Engine at `/socket.io/` on same host |
 
 Env examples:
 
-- `NEXT_PUBLIC_API_URL=https://api-dev.lona.my` (webapps — socket at `{origin}/ws/notifications`)
-- `NEXT_PUBLIC_API_BASE_URL=https://api.lona.my/api` (internal-hub REST; socket uses origin)
+- `NEXT_PUBLIC_API_URL=https://api-dev.plyshub.space` (webapps — socket at `{origin}/ws/notifications`)
+- `NEXT_PUBLIC_API_BASE_URL=https://api.plyshub.space/api` (internal-hub REST; socket uses origin)
 - `INTERNAL_AUTH_URL=http://127.0.0.1:4000/api` on VPS (server-side hub FE)
 - `ALLOWED_ORIGINS` must list all frontend hosts (see service-api `infra/env/.env.dev`)
 - Health loopback: `curl -sf http://127.0.0.1:4000/api/v1/gateway/health`
-- Health public: `curl -sf https://api.lona.my/v1/gateway/health`
-- Socket.IO probe: `curl -sI "https://api-dev.lona.my/socket.io/?EIO=4&transport=polling" | head -3`
+- Health public: `curl -sf https://api.plyshub.space/v1/gateway/health`
+- Socket.IO probe: `curl -sI "https://api-dev.plyshub.space/socket.io/?EIO=4&transport=polling" | head -3`
 
 ---
 
@@ -504,30 +501,15 @@ Env examples:
 
 ### 4.1 Host packages
 
-**On VPS (Ubuntu/Debian):**
-
-```bash
-sudo apt update
-sudo apt install -y nginx certbot python3-certbot-nginx docker.io docker-compose-plugin redis-tools postgresql-client
-
-# Node for PM2 helper scripts (if not already installed)
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh"
-nvm install 20
-npm install -g pm2 pnpm
-
-docker --version
-docker compose version
-nginx -v
-```
+Complete **[Prerequisites](../vps-started/01-prerequisites.md)** first (Node 22, Docker, nginx, PM2, pnpm, `/apps` layout).
 
 ### 4.2 Nginx — all application hostnames
 
 Ports match Section 3. Deploy paths use Docker images (no host `alias` to `.next/static` unless you run standalone without Docker).
 
-**Dedicated dev VPS only?** Use the full block in [vps-deployment-dev.md](vps-deployment-dev.md) §4 instead of the dev subsection below.
+**Dedicated dev VPS only?** Use the full block in [Dev deploy](../deploy-dev/01-deploy.md) §4 instead of the dev subsection below.
 
-**Dedicated prod VPS only?** Use [vps-deployment-prod.md](vps-deployment-prod.md) §4 instead of the prod subsection below.
+**Dedicated prod VPS only?** Use [Prod deploy](../deploy-prod/01-deploy.md) §4 instead of the prod subsection below.
 
 #### 4.2.1 Development vhosts
 
@@ -553,10 +535,10 @@ server {
 NGINX
 sudo ln -sf /etc/nginx/sites-available/dev.ployos.com /etc/nginx/sites-enabled/
 
-sudo tee /etc/nginx/sites-available/dev.lona.run > /dev/null <<'NGINX'
+sudo tee /etc/nginx/sites-available/dev.lonaos.com > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name dev.lona.run;
+    server_name dev.lonaos.com;
     location / {
         proxy_pass http://127.0.0.1:3011;
         proxy_http_version 1.1;
@@ -570,7 +552,7 @@ server {
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/dev.lona.run /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/dev.lonaos.com /etc/nginx/sites-enabled/
 
 sudo tee /etc/nginx/sites-available/app-dev.ployos.com > /dev/null <<'NGINX'
 server {
@@ -591,10 +573,10 @@ server {
 NGINX
 sudo ln -sf /etc/nginx/sites-available/app-dev.ployos.com /etc/nginx/sites-enabled/
 
-sudo tee /etc/nginx/sites-available/app-dev.lona.run > /dev/null <<'NGINX'
+sudo tee /etc/nginx/sites-available/app-dev.lonaos.com > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name app-dev.lona.run;
+    server_name app-dev.lonaos.com;
     location / {
         proxy_pass http://127.0.0.1:3031;
         proxy_http_version 1.1;
@@ -608,12 +590,12 @@ server {
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/app-dev.lona.run /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/app-dev.lonaos.com /etc/nginx/sites-enabled/
 
-sudo tee /etc/nginx/sites-available/dev.lona.my > /dev/null <<'NGINX'
+sudo tee /etc/nginx/sites-available/dev.plyshub.space > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name dev.lona.my;
+    server_name dev.plyshub.space;
     location / {
         proxy_pass http://127.0.0.1:3101;
         proxy_http_version 1.1;
@@ -627,12 +609,12 @@ server {
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/dev.lona.my /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/dev.plyshub.space /etc/nginx/sites-enabled/
 
-sudo tee /etc/nginx/sites-available/admin-dev.lona.my > /dev/null <<'NGINX'
+sudo tee /etc/nginx/sites-available/admin-dev.plyshub.space > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name admin-dev.lona.my;
+    server_name admin-dev.plyshub.space;
     location / {
         proxy_pass http://127.0.0.1:3201;
         proxy_http_version 1.1;
@@ -646,12 +628,12 @@ server {
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/admin-dev.lona.my /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/admin-dev.plyshub.space /etc/nginx/sites-enabled/
 
-sudo tee /etc/nginx/sites-available/review-dev.lona.my > /dev/null <<'NGINX'
+sudo tee /etc/nginx/sites-available/review-dev.plyshub.space > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name review-dev.lona.my;
+    server_name review-dev.plyshub.space;
     location / {
         proxy_pass http://127.0.0.1:3301;
         proxy_http_version 1.1;
@@ -665,12 +647,12 @@ server {
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/review-dev.lona.my /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/review-dev.plyshub.space /etc/nginx/sites-enabled/
 
-sudo tee /etc/nginx/sites-available/api-dev.lona.my > /dev/null <<'NGINX'
+sudo tee /etc/nginx/sites-available/api-dev.plyshub.space > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name api-dev.lona.my;
+    server_name api-dev.plyshub.space;
 
     location /socket.io/ {
         proxy_pass http://127.0.0.1:4001;
@@ -713,7 +695,7 @@ server {
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/api-dev.lona.my /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/api-dev.plyshub.space /etc/nginx/sites-enabled/
 ```
 
 #### 4.2.2 Production vhosts
@@ -740,10 +722,10 @@ server {
 NGINX
 sudo ln -sf /etc/nginx/sites-available/ployos.com /etc/nginx/sites-enabled/
 
-sudo tee /etc/nginx/sites-available/lona.run > /dev/null <<'NGINX'
+sudo tee /etc/nginx/sites-available/lonaos.com > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name lona.run;
+    server_name lonaos.com;
     location / {
         proxy_pass http://127.0.0.1:3010;
         proxy_http_version 1.1;
@@ -757,7 +739,7 @@ server {
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/lona.run /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/lonaos.com /etc/nginx/sites-enabled/
 
 sudo tee /etc/nginx/sites-available/app.ployos.com > /dev/null <<'NGINX'
 server {
@@ -778,10 +760,10 @@ server {
 NGINX
 sudo ln -sf /etc/nginx/sites-available/app.ployos.com /etc/nginx/sites-enabled/
 
-sudo tee /etc/nginx/sites-available/app.lona.run > /dev/null <<'NGINX'
+sudo tee /etc/nginx/sites-available/app.lonaos.com > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name app.lona.run;
+    server_name app.lonaos.com;
     location / {
         proxy_pass http://127.0.0.1:3030;
         proxy_http_version 1.1;
@@ -795,12 +777,12 @@ server {
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/app.lona.run /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/app.lonaos.com /etc/nginx/sites-enabled/
 
-sudo tee /etc/nginx/sites-available/lona.my > /dev/null <<'NGINX'
+sudo tee /etc/nginx/sites-available/plyshub.space > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name lona.my;
+    server_name plyshub.space;
     location / {
         proxy_pass http://127.0.0.1:3100;
         proxy_http_version 1.1;
@@ -814,12 +796,12 @@ server {
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/lona.my /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/plyshub.space /etc/nginx/sites-enabled/
 
-sudo tee /etc/nginx/sites-available/admin.lona.my > /dev/null <<'NGINX'
+sudo tee /etc/nginx/sites-available/admin.plyshub.space > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name admin.lona.my;
+    server_name admin.plyshub.space;
     location / {
         proxy_pass http://127.0.0.1:3200;
         proxy_http_version 1.1;
@@ -833,12 +815,12 @@ server {
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/admin.lona.my /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/admin.plyshub.space /etc/nginx/sites-enabled/
 
-sudo tee /etc/nginx/sites-available/review.lona.my > /dev/null <<'NGINX'
+sudo tee /etc/nginx/sites-available/review.plyshub.space > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name review.lona.my;
+    server_name review.plyshub.space;
     location / {
         proxy_pass http://127.0.0.1:3300;
         proxy_http_version 1.1;
@@ -852,12 +834,12 @@ server {
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/review.lona.my /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/review.plyshub.space /etc/nginx/sites-enabled/
 
-sudo tee /etc/nginx/sites-available/api.lona.my > /dev/null <<'NGINX'
+sudo tee /etc/nginx/sites-available/api.plyshub.space > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name api.lona.my;
+    server_name api.plyshub.space;
 
     location /socket.io/ {
         proxy_pass http://127.0.0.1:4000;
@@ -900,33 +882,7 @@ server {
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/api.lona.my /etc/nginx/sites-enabled/
-```
-
-#### 4.2.3 Monitoring vhost (optional, after Section 6)
-
-Use `observe-dev.lona.my` on dev VPS and `observe.lona.my` on prod VPS — see [vps-monitoring-openobserve.md](vps-monitoring-openobserve.md) §5.
-
-**On VPS (example — dev):**
-
-```bash
-sudo tee /etc/nginx/sites-available/observe-dev.lona.my > /dev/null <<'NGINX'
-server {
-    listen 80;
-    server_name observe-dev.lona.my;
-    location / {
-        proxy_pass http://127.0.0.1:5080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-NGINX
-sudo ln -sf /etc/nginx/sites-available/observe-dev.lona.my /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/api.plyshub.space /etc/nginx/sites-enabled/
 ```
 
 **On VPS** — test and reload:
@@ -942,17 +898,16 @@ sudo nginx -t && sudo systemctl reload nginx
 ```bash
 sudo certbot --nginx \
   -d ployos.com -d www.ployos.com -d dev.ployos.com -d app.ployos.com -d app-dev.ployos.com \
-  -d lona.run -d dev.lona.run -d app.lona.run -d app-dev.lona.run \
-  -d lona.my -d dev.lona.my -d admin.lona.my -d admin-dev.lona.my \
-  -d review.lona.my -d review-dev.lona.my \
-  -d api.lona.my -d api-dev.lona.my \
-  -d observe-dev.lona.my -d observe.lona.my \
-  -d db-dev.lona.my -d redis-dev.lona.my -d db.lona.my -d redis.lona.my
+  -d lonaos.com -d dev.lonaos.com -d app.lonaos.com -d app-dev.lonaos.com \
+  -d plyshub.space -d dev.plyshub.space -d admin.plyshub.space -d admin-dev.plyshub.space \
+  -d review.plyshub.space -d review-dev.plyshub.space \
+  -d api.plyshub.space -d api-dev.plyshub.space \
+  -d db-dev.plyshub.space -d redis-dev.plyshub.space -d db.plyshub.space -d redis.plyshub.space
 
 sudo certbot renew --dry-run
 ```
 
-Data GUI nginx: [vps-data-tools-adminer-redis-insight.md](vps-data-tools-adminer-redis-insight.md) §4 (skip `-d db*` / `redis*` if using SSH tunnel only).
+Data GUI nginx: [Adminer + Redis Insight](../vps-started/04-data-tools-adminer-redis.md) §4 (skip `-d db*` / `redis*` if using SSH tunnel only).
 
 ### 4.4 Deploy order
 
@@ -960,12 +915,11 @@ Data GUI nginx: [vps-data-tools-adminer-redis-insight.md](vps-data-tools-adminer
 2. `internal-hub-be` dev deploy + migrations  
 3. `internal-hub-fe` dev (×3 apps)  
 4. `plys-webapps` dev (×4 apps)  
-5. [OpenObserve monitoring](vps-monitoring-openobserve.md) (GitHub Actions from `plys-dev-ops`)  
-6. Production via manual workflows  
+5. Production via manual workflows on `plys-prod-vps`  
 
 ### 4.5 Compose on VPS (per bundle)
 
-Normally **GitHub Actions** runs these. Use manually only for debugging.
+Normally **GitHub Actions on the VPS self-hosted runner** runs these. Use manually only for debugging.
 
 **On VPS** — backend dev (after bundle landed in `current/`):
 
@@ -989,25 +943,30 @@ curl -sf http://127.0.0.1:3031/api/health
 
 ---
 
-## 5. GitHub Actions
+## 5. GitHub Actions self-hosted runners
 
 ### 5.1 Shared flow
 
-Checkout → build/push GHCR → render env → prepare bundle → SCP → SSH docker compose + PM2 → health check.
+Checkout on VPS runner → build/push or pull image → render env → prepare bundle → copy bundle locally to `/apps/.../current` → docker compose + PM2 reload → health check.
 
-### 5.2 Secrets matrix
+Runner setup: [Self-hosted runner](../vps-started/02-self-hosted-runner.md).
 
-| Secret | Repos | Environment |
-|--------|-------|-------------|
-| `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_SSH_PORT` | all | dev + production |
-| `GHCR_PULL_TOKEN` | all | dev + production |
-| `DB_PASSWORD`, `REDIS_PASSWORD` | service-api | dev + production |
-| `DEV_AUTH_SECRET` / `PROD_AUTH_SECRET` | webapps, internal-hub | dev / production |
-| `DEV_GOOGLE_*`, `PROD_GOOGLE_*` | webapps | optional |
-| `DEV_PUBLIC_ENDPOINT_API_KEY` / `PROD_*` | webapps | optional |
-| `DEV_FE_BFF_SECRET_v1` / `PROD_*` | webapps (ployos-app) | optional |
+### 5.2 GitHub monorepo setup
 
-See each repo `infra/env/secrets.list`.
+Full step-by-step for **both** environments on all three repos: **[02-github-monorepos.md](02-github-monorepos.md)**.
+
+Quick reference:
+
+| Item | Dev | Prod |
+|------|-----|------|
+| Runner group | `plys-dev-runners` | `plys-prod-runners` |
+| GitHub environment | `dev` | `production` (+ required reviewers) |
+| Backend DB/Redis secrets | `DB_PASSWORD`, `REDIS_PASSWORD` → dev `/apps/.env.data` | Same keys → prod passwords in `.env.data` |
+| Frontend secrets | `AUTH_SECRET` (+ webapps `PUBLIC_ENDPOINT_API_KEY`) | **Separate** prod values |
+| Optional | `GHCR_PULL_TOKEN`, Google OAuth | Same pattern |
+| Remove | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_SSH_PORT` | Same |
+
+Per-repo lists: each monorepo `infra/env/secrets.list`.
 
 ### 5.3 Workflows
 
@@ -1034,15 +993,7 @@ See each repo `infra/env/secrets.list`.
 
 ---
 
-## 6. OpenObserve monitoring
-
-See **[vps-monitoring-openobserve.md](vps-monitoring-openobserve.md)** — OpenObserve UI on loopback **5080**, OTEL Collector **4317**/**4318**, deploy via `plys-dev-ops` GitHub Actions to `/apps/monitoring/current`.
-
-Dev VPS: `observe-dev.lona.my` · Prod VPS: `observe.lona.my` · Login: `huuphuc9410@gmail.com` + GitHub secret `OPENOBSERVE_ROOT_PASSWORD`.
-
----
-
-## 7. Post-deploy verification
+## 6. Post-deploy verification
 
 ### Command guide — smoke script
 
@@ -1059,7 +1010,7 @@ redis-cli -p 6379 -a "$REDIS_PROD_PASSWORD" --no-auth-warning PING
 
 echo "=== API gateway ==="
 curl -sf http://127.0.0.1:4001/api/v1/gateway/health && echo " gateway dev loopback OK"
-curl -sf https://api-dev.lona.my/v1/gateway/health && echo " gateway dev public OK"
+curl -sf https://api-dev.plyshub.space/v1/gateway/health && echo " gateway dev public OK"
 
 echo "=== FE health (loopback) ==="
 curl -sf http://127.0.0.1:3001/api/health && echo " ployos-marketing dev OK"
@@ -1067,35 +1018,34 @@ curl -sf http://127.0.0.1:3101/api/health && echo " internal-hub dev OK"
 
 echo "=== HTTPS samples ==="
 curl -sI https://dev.ployos.com | head -1
-curl -sI https://dev.lona.my | head -1
+curl -sI https://dev.plyshub.space | head -1
 
 echo "=== Layout ==="
 test ! -e /apps/environments && echo "/apps/environments absent OK"
 ls /apps/plys-webapps/dev/current/docker-compose.yml && echo "webapps bundle present"
 
 echo "=== Ports ==="
-ss -tlnp | grep -E '3000|3100|3200|4000|4001|5080|4317|4318' || true
+ss -tlnp | grep -E '3000|3100|3200|4000|4001' || true
 ```
 
 ### Checklist
 
 - [ ] `dig` returns VPS IP for all hosts (grey cloud) — Section 2.5  
 - [ ] HTTPS 200/302 on public hostnames  
-- [ ] `curl -sf https://api.lona.my/v1/gateway/health`  
-- [ ] `curl -sf https://api-dev.lona.my/v1/docs` (Swagger, dev)  
-- [ ] `curl -sI "https://api-dev.lona.my/socket.io/?EIO=4&transport=polling"` not 404 (notifications WS)  
-- [ ] OTP on `dev.lona.my`; cookies on `.lona.my`  
-- [ ] Product auth on `app-dev.ployos.com` / `app-dev.lona.run`  
+- [ ] `curl -sf https://api.plyshub.space/v1/gateway/health`  
+- [ ] `curl -sf https://api-dev.plyshub.space/v1/docs` (Swagger, dev)  
+- [ ] `curl -sI "https://api-dev.plyshub.space/socket.io/?EIO=4&transport=polling"` not 404 (notifications WS)  
+- [ ] OTP on `dev.plyshub.space`; cookies on `.plyshub.space`  
+- [ ] Product auth on `app-dev.ployos.com` / `app-dev.lonaos.com`  
 - [ ] Postgres `plys-db-dev` / `plys-db` reachable  
 - [ ] Redis PING on 6380 / 6379  
 - [ ] `/apps/environments` does not exist  
-- [ ] OpenObserve per [vps-monitoring-openobserve.md](vps-monitoring-openobserve.md) (if installed)  
 
 ---
 
 ## Revert / reset
 
-See **[vps-cleanup-and-reset.md](vps-cleanup-and-reset.md)** — full cleanup, dev-only, prod-only, or **Postgres/Redis volume reset** without wiping nginx.
+See **[Cleanup and reset](../vps-started/03-cleanup-and-reset.md)** — full cleanup, dev-only, prod-only, or **Postgres/Redis volume reset** without wiping nginx.
 
 ---
 
@@ -1104,24 +1054,22 @@ See **[vps-cleanup-and-reset.md](vps-cleanup-and-reset.md)** — full cleanup, d
 ```
 dev.ployos.com      → :3001    ployos-marketing-dev
 ployos.com          → :3000    ployos-marketing-prod
-dev.lona.run        → :3011    lonaos-marketing-dev
-lona.run            → :3010    lonaos-marketing-prod
+dev.lonaos.com        → :3011    lonaos-marketing-dev
+lonaos.com            → :3010    lonaos-marketing-prod
 app-dev.ployos.com  → :3021    ployos-app-dev
 app.ployos.com      → :3020    ployos-app-prod
-app-dev.lona.run    → :3031    lonaos-app-dev
-app.lona.run        → :3030    lonaos-app-prod
-dev.lona.my         → :3101    internal-hub-dev
-lona.my             → :3100    internal-hub-prod
-admin-dev.lona.my   → :3201    internal-admin-hub-dev
-admin.lona.my       → :3200    internal-admin-hub-prod
-review-dev.lona.my  → :3301    internal-task-reviewer-dev
-review.lona.my      → :3300    internal-task-reviewer-prod
-api-dev.lona.my/*   → :4001    rewrite → /api/* (REST only)
-api-dev.lona.my/socket.io/* → :4001    no rewrite (notifications WS)
-api.lona.my/*       → :4000    rewrite → /api/* (REST only)
-api.lona.my/socket.io/*     → :4000    no rewrite (notifications WS)
-observe-dev.lona.my         → :5080    OpenObserve (dev VPS; see vps-monitoring-openobserve.md)
-observe.lona.my             → :5080    OpenObserve (prod VPS)
-db-dev.lona.my (example)    → :8080    Adminer (loopback; see vps-data-tools-adminer-redis-insight.md)
-redis-dev.lona.my (example) → :5540    Redis Insight
+app-dev.lonaos.com    → :3031    lonaos-app-dev
+app.lonaos.com        → :3030    lonaos-app-prod
+dev.plyshub.space         → :3101    internal-hub-dev
+plyshub.space             → :3100    internal-hub-prod
+admin-dev.plyshub.space   → :3201    internal-admin-hub-dev
+admin.plyshub.space       → :3200    internal-admin-hub-prod
+review-dev.plyshub.space  → :3301    internal-task-reviewer-dev
+review.plyshub.space      → :3300    internal-task-reviewer-prod
+api-dev.plyshub.space/*   → :4001    rewrite → /api/* (REST only)
+api-dev.plyshub.space/socket.io/* → :4001    no rewrite (notifications WS)
+api.plyshub.space/*       → :4000    rewrite → /api/* (REST only)
+api.plyshub.space/socket.io/*     → :4000    no rewrite (notifications WS)
+db-dev.plyshub.space (example)    → :8080    Adminer (loopback; see vps-started/04-data-tools-adminer-redis.md)
+redis-dev.plyshub.space (example) → :5540    Redis Insight
 ```

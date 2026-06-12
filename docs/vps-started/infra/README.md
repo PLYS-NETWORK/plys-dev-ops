@@ -11,7 +11,7 @@ Copy these files to the VPS with `sudo nano` (paste contents from this folder). 
 | [env.data.dev.example](env.data.dev.example) | `/apps/.env.data` | Dev-only VPS |
 | [env.data.prod.example](env.data.prod.example) | `/apps/.env.data` | Prod-only VPS |
 
-**Data GUI (optional):** compose templates include **Adminer** (`127.0.0.1:8080`) and **Redis Insight** (`127.0.0.1:5540`). Setup: [vps-data-tools-adminer-redis-insight.md](../vps-data-tools-adminer-redis-insight.md).
+**Data GUI (optional):** compose templates include **Adminer** (`127.0.0.1:8080`) and **Redis Insight** (`127.0.0.1:5540`). Setup: [Adminer + Redis Insight](../04-data-tools-adminer-redis.md).
 
 ## Quick setup (dev VPS)
 
@@ -33,7 +33,7 @@ cd /apps
 docker compose --env-file /apps/.env.data up -d postgres-dev redis-dev adminer redisinsight
 ```
 
-See [vps-deployment-dev.md](../vps-deployment-dev.md), [vps-data-tools-adminer-redis-insight.md](../vps-data-tools-adminer-redis-insight.md), [vps-monitoring-openobserve.md](../vps-monitoring-openobserve.md), and [vps-cleanup-and-reset.md](../vps-cleanup-and-reset.md).
+See [Dev deploy](../../deploy-dev/01-deploy.md), [Adminer + Redis Insight](../04-data-tools-adminer-redis.md), and [Cleanup and reset](../03-cleanup-and-reset.md).
 
 ## GitHub secrets mapping
 

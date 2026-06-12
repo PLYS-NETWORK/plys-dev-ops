@@ -1,10 +1,12 @@
 # VPS — Adminer + Redis Insight (Postgres / Redis GUI)
 
+**Track:** [vps-started](README.md) · Optional · [Docs index](../README.md)
+
 Browser UIs for Postgres (**Adminer**) and Redis (**Redis Insight**) on the VPS. Containers bind **localhost only**; expose via **nginx + HTTPS + basic auth** (recommended) or **SSH tunnel** (no public DNS).
 
 Templates: [infra/docker-compose.data-dev.yml](infra/docker-compose.data-dev.yml), [infra/docker-compose.data-prod.yml](infra/docker-compose.data-prod.yml), [infra/docker-compose.data.yml](infra/docker-compose.data.yml) (already include `adminer` and `redisinsight`).
 
-Related: [vps-deployment-dev.md](vps-deployment-dev.md) · [vps-deployment-prod.md](vps-deployment-prod.md) · [vps-end-to-end-deployment.md](vps-end-to-end-deployment.md) · [infra/README.md](infra/README.md)
+Related: [Dev deploy](../deploy-dev/01-deploy.md) · [Prod deploy](../deploy-prod/01-deploy.md) · [All-in-one deploy](../deploy-all-in-one-vps/01-deploy.md) · [Infra templates](infra/README.md)
 
 ---
 
@@ -12,7 +14,7 @@ Related: [vps-deployment-dev.md](vps-deployment-dev.md) · [vps-deployment-prod.
 
 | Service | Host bind | Notes |
 |---------|-----------|--------|
-| Adminer | `127.0.0.1:8080` | Do not use `admin*.lona.my` — reserved for **internal-admin-hub** app |
+| Adminer | `127.0.0.1:8080` | Do not use `admin*.plyshub.space` — reserved for **internal-admin-hub** app |
 | Redis Insight | `127.0.0.1:5540` | Avoid `3100`/`3200` on combined VPS (internal-hub FE) |
 
 ---
@@ -23,15 +25,15 @@ Set on the VPS before nginx/Certbot (replace zone if needed):
 
 ```bash
 # Dev-only VPS examples
-export DB_GUI_HOST="db-dev.lona.my"
-export REDIS_GUI_HOST="redis-dev.lona.my"
+export DB_GUI_HOST="db-dev.plyshub.space"
+export REDIS_GUI_HOST="redis-dev.plyshub.space"
 
 # Prod-only VPS examples
-export DB_GUI_HOST="db.lona.my"
-export REDIS_GUI_HOST="redis.lona.my"
+export DB_GUI_HOST="db.plyshub.space"
+export REDIS_GUI_HOST="redis.plyshub.space"
 
 # Combined VPS: use dev hostnames above on the same certbot run as app dev hosts,
-# and add db.lona.my + redis.lona.my for prod (see §4.3 in vps-end-to-end-deployment.md).
+# and add db.plyshub.space + redis.plyshub.space for prod (see §4.3 in the all-in-one deploy guide).
 ```
 
 **Cloudflare:** A records → VPS IP, **DNS only** (grey cloud).
@@ -40,7 +42,7 @@ export REDIS_GUI_HOST="redis.lona.my"
 
 ## 1. Start containers
 
-Included in `/apps/docker-compose.yml` from [infra/](infra/). After Postgres/Redis are up:
+Included in `/apps/docker-compose.yml` from [Infra templates](infra/README.md). After Postgres/Redis are up:
 
 **Dev-only VPS:**
 
@@ -124,8 +126,8 @@ sudo htpasswd -c /etc/nginx/.htpasswd-data-tools YOUR_OPS_USER
 **On VPS** — set `DB_GUI_HOST` / `REDIS_GUI_HOST` (§ placeholders), then:
 
 ```bash
-export DB_GUI_HOST="${DB_GUI_HOST:-db-dev.lona.my}"
-export REDIS_GUI_HOST="${REDIS_GUI_HOST:-redis-dev.lona.my}"
+export DB_GUI_HOST="${DB_GUI_HOST:-db-dev.plyshub.space}"
+export REDIS_GUI_HOST="${REDIS_GUI_HOST:-redis-dev.plyshub.space}"
 
 sudo tee /etc/nginx/sites-available/${DB_GUI_HOST} > /dev/null <<NGINX
 server {
@@ -171,7 +173,7 @@ sudo ln -sf /etc/nginx/sites-available/${REDIS_GUI_HOST} /etc/nginx/sites-enable
 
 ### 4.2 Prod hostnames
 
-Same block with `db.lona.my` / `redis.lona.my` (or your prod zone). **Restrict prod** with nginx `allow YOUR_OFFICE_IP; deny all;` inside the `server` block if the VPS is production.
+Same block with `db.plyshub.space` / `redis.plyshub.space` (or your prod zone). **Restrict prod** with nginx `allow YOUR_OFFICE_IP; deny all;` inside the `server` block if the VPS is production.
 
 ### 4.3 Certbot
 
@@ -179,10 +181,10 @@ Add GUI hosts to your existing certbot command, e.g. dev VPS:
 
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d db-dev.lona.my -d redis-dev.lona.my
+sudo certbot --nginx -d db-dev.plyshub.space -d redis-dev.plyshub.space
 ```
 
-Combined VPS: include all app hosts **plus** `db-dev`, `redis-dev`, `db`, `redis` in one certbot run (see [vps-end-to-end-deployment.md](vps-end-to-end-deployment.md) §4.3).
+Combined VPS: include all app hosts **plus** `db-dev`, `redis-dev`, `db`, `redis` in one certbot run (see [All-in-one deploy](../deploy-all-in-one-vps/01-deploy.md) §4.3).
 
 ---
 
@@ -217,7 +219,7 @@ docker compose --env-file /apps/.env.data stop adminer redisinsight
 docker rm -f adminer redisinsight 2>/dev/null || true
 ```
 
-Full stack cleanup: [vps-cleanup-and-reset.md](vps-cleanup-and-reset.md) (includes `adminer` / `redisinsight` in `docker rm` examples).
+Full stack cleanup: [Cleanup and reset](03-cleanup-and-reset.md) (includes `adminer` / `redisinsight` in `docker rm` examples).
 
 ---
 
