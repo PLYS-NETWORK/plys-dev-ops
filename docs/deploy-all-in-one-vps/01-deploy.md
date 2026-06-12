@@ -217,6 +217,26 @@ ss -tlnp | grep -E '5432|5433|6379|6380'
 
 Expected: `current_database` = `plys-db-dev` / `plys-db`; Redis returns `PONG`.
 
+#### Step 1.5.5 — Data tools (optional)
+
+Browser GUIs for Postgres and Redis — [Adminer + Redis Insight](../vps-started/04-data-tools-adminer-redis.md).
+
+One **Adminer** and one **Redis Insight** container serve both environments. In Adminer, pick server `postgres-dev` or `postgres-prod`; in Redis Insight, add connections for `redis-dev` and `redis-prod` (Docker service names).
+
+1. Containers are started in step 1.5.3 (`adminer`, `redisinsight`).
+2. Create `/etc/nginx/.htpasswd-data-tools` and nginx vhosts for all four GUI hostnames (data-tools guide §4.1–4.2).
+3. Add `-d db-dev.plyshub.space -d redis-dev.plyshub.space -d db.plyshub.space -d redis.plyshub.space` to certbot in §4.3 (or use SSH tunnel only).
+
+#### Step 1.5.6 — OpenObserve monitoring (optional)
+
+On a combined host, run **one** OpenObserve stack that ingests dev and prod PM2 logs. OTEL filelog sets `deployment.environment` from each log path (`dev` or `prod`).
+
+1. Create `/apps/monitoring/{current,data}` — [Prerequisites §4](../vps-started/01-prerequisites.md#4-create-apps-layout).
+2. Configure nginx for `observe-dev.plyshub.space` and/or `observe.plyshub.space` (both can proxy to `127.0.0.1:5080`).
+3. After app deploys populate `/apps/*/dev/logs` and `/apps/*/prod/logs`, run **`plys-dev-ops` → Deploy monitoring — Dev** with workflow input `deploy_env: combined`.
+
+Full guide: [OpenObserve monitoring](../vps-started/06-monitoring-openobserve.md#combined-vps-all-in-one).
+
 #### Step 1.5.5 — Sync passwords to GitHub (backend repo)
 
 In **GitHub → plys-internal-hub-serivce-api → Settings → Environments**:
@@ -902,12 +922,15 @@ sudo certbot --nginx \
   -d plyshub.space -d dev.plyshub.space -d admin.plyshub.space -d admin-dev.plyshub.space \
   -d review.plyshub.space -d review-dev.plyshub.space \
   -d api.plyshub.space -d api-dev.plyshub.space \
-  -d db-dev.plyshub.space -d redis-dev.plyshub.space -d db.plyshub.space -d redis.plyshub.space
+  -d db-dev.plyshub.space -d redis-dev.plyshub.space -d db.plyshub.space -d redis.plyshub.space \
+  -d observe-dev.plyshub.space -d observe.plyshub.space
 
 sudo certbot renew --dry-run
 ```
 
 Data GUI nginx: [Adminer + Redis Insight](../vps-started/04-data-tools-adminer-redis.md) §4 (skip `-d db*` / `redis*` if using SSH tunnel only).
+
+Monitoring nginx: [OpenObserve](../vps-started/06-monitoring-openobserve.md) (optional; both observe hosts can proxy to the same `:5080`).
 
 ### 4.4 Deploy order
 
@@ -915,7 +938,8 @@ Data GUI nginx: [Adminer + Redis Insight](../vps-started/04-data-tools-adminer-r
 2. `internal-hub-be` dev deploy + migrations  
 3. `internal-hub-fe` dev (×3 apps)  
 4. `plys-webapps` dev (×4 apps)  
-5. Production via manual workflows on `plys-prod-vps`  
+5. **`plys-dev-ops` — Deploy monitoring — Dev** with `deploy_env: combined` (after dev app logs exist) — [OpenObserve](../vps-started/06-monitoring-openobserve.md)  
+6. Production via manual workflows on `plys-prod-vps`  
 
 ### 4.5 Compose on VPS (per bundle)
 
@@ -1072,4 +1096,6 @@ api.plyshub.space/*       → :4000    rewrite → /api/* (REST only)
 api.plyshub.space/socket.io/*     → :4000    no rewrite (notifications WS)
 db-dev.plyshub.space (example)    → :8080    Adminer (loopback; see vps-started/04-data-tools-adminer-redis.md)
 redis-dev.plyshub.space (example) → :5540    Redis Insight
+observe-dev.plyshub.space       → :5080    OpenObserve (loopback; see vps-started/06-monitoring-openobserve.md)
+observe.plyshub.space           → :5080    OpenObserve (same stack on combined VPS)
 ```

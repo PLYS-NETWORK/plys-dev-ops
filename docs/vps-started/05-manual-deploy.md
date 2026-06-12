@@ -47,6 +47,9 @@ Do not deploy prod from `develop`, and do not run dev commands on the production
 | `admin-dev.plyshub.space` | 3201 | internal-admin-hub |
 | `review-dev.plyshub.space` | 3301 | internal-task-reviewer |
 | `api-dev.plyshub.space` | 4001 | api-gateway |
+| `db-dev.plyshub.space` | 8080 | Adminer (loopback; optional) |
+| `redis-dev.plyshub.space` | 5540 | Redis Insight (loopback; optional) |
+| `observe-dev.plyshub.space` | 5080 | OpenObserve (loopback; optional) |
 
 ### Prod
 
@@ -60,8 +63,11 @@ Do not deploy prod from `develop`, and do not run dev commands on the production
 | `admin.plyshub.space` | 3200 | internal-admin-hub |
 | `review.plyshub.space` | 3300 | internal-task-reviewer |
 | `api.plyshub.space` | 4000 | api-gateway |
+| `db.plyshub.space` | 8080 | Adminer (loopback; prefer SSH tunnel) |
+| `redis.plyshub.space` | 5540 | Redis Insight (loopback; prefer SSH tunnel) |
+| `observe.plyshub.space` | 5080 | OpenObserve (loopback; optional) |
 
-Cloudflare records should be **DNS only** for app, API, admin, review, and dev hosts.
+Cloudflare records should be **DNS only** for app, API, admin, review, data-tool, and monitoring hosts.
 
 ---
 
@@ -340,6 +346,32 @@ curl -sI https://lonaos.com | head -1
 curl -sI https://app.ployos.com | head -1
 curl -sI https://app.lonaos.com | head -1
 ```
+
+### 5.5 Deploy OpenObserve monitoring (optional)
+
+After app deploys create PM2 log directories:
+
+**On VPS** (from a checkout of `plys-dev-ops` or after copying `monitoring/` files):
+
+```bash
+export OPENOBSERVE_ROOT_PASSWORD='your-password'
+export DEPLOY_ENV_LABEL=dev   # use prod on prod VPS; combined on all-in-one host
+
+node /path/to/plys-dev-ops/scripts/render-monitoring-env.mjs \
+  --deploy-env "$DEPLOY_ENV_LABEL" \
+  --output /apps/monitoring/current/.env
+
+cp /path/to/plys-dev-ops/monitoring/docker-compose.yml /apps/monitoring/current/
+cp /path/to/plys-dev-ops/monitoring/otel-collector-config.yaml /apps/monitoring/current/
+chmod 600 /apps/monitoring/current/.env
+
+cd /apps/monitoring/current
+docker compose -p plys-monitoring --env-file .env pull
+docker compose -p plys-monitoring --env-file .env up -d
+curl -sf http://127.0.0.1:5080/health && echo " openobserve OK"
+```
+
+Full guide: [OpenObserve monitoring](06-monitoring-openobserve.md).
 
 ---
 

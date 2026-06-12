@@ -309,9 +309,10 @@ sudo mkdir -p /apps/source
 sudo mkdir -p /apps/plys-webapps/dev/{current,logs}
 sudo mkdir -p /apps/internal-hub-fe/dev/{current,logs}
 sudo mkdir -p /apps/internal-hub-be/dev/{current,logs}
+sudo mkdir -p /apps/monitoring/{current,data}
 
 sudo chown -R github-runner:github-runner \
-  /apps/source /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be
+  /apps/source /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be /apps/monitoring
 ```
 
 **Prod-only VPS:**
@@ -322,9 +323,10 @@ sudo mkdir -p /apps/source
 sudo mkdir -p /apps/plys-webapps/prod/{current,logs}
 sudo mkdir -p /apps/internal-hub-fe/prod/{current,logs}
 sudo mkdir -p /apps/internal-hub-be/prod/{current,logs}
+sudo mkdir -p /apps/monitoring/{current,data}
 
 sudo chown -R github-runner:github-runner \
-  /apps/source /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be
+  /apps/source /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be /apps/monitoring
 ```
 
 **Combined VPS:**
@@ -335,9 +337,10 @@ sudo mkdir -p /apps/source
 sudo mkdir -p /apps/plys-webapps/{dev,prod}/{current,logs}
 sudo mkdir -p /apps/internal-hub-fe/{dev,prod}/{current,logs}
 sudo mkdir -p /apps/internal-hub-be/{dev,prod}/{current,logs}
+sudo mkdir -p /apps/monitoring/{current,data}
 
 sudo chown -R github-runner:github-runner \
-  /apps/source /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be
+  /apps/source /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be /apps/monitoring
 ```
 
 Do **not** give `github-runner` ownership of `/etc/nginx` or TLS certs. nginx stays managed by your admin user.
@@ -370,6 +373,7 @@ Canonical app paths on every VPS:
 | `/apps/plys-webapps/{dev,prod}/current` | plys-monorepo-webapps |
 | `/apps/internal-hub-fe/{dev,prod}/current` | plys-internal-hub |
 | `/apps/internal-hub-be/{dev,prod}/current` | plys-internal-hub-serivce-api |
+| `/apps/monitoring/current` | plys-dev-ops (OpenObserve) |
 
 **Self-hosted runner:** if you completed Section 3.5.4, directories already exist and are owned by `github-runner` — verify with `ls -la /apps/plys-webapps` and skip the mkdir blocks below unless you deploy manually from your SSH user.
 
@@ -385,6 +389,8 @@ mkdir -p /apps/source
 mkdir -p /apps/plys-webapps/dev/{current,logs}
 mkdir -p /apps/internal-hub-fe/dev/{current,logs}
 mkdir -p /apps/internal-hub-be/dev/{current,logs}
+mkdir -p /apps/monitoring/{current,data}
+chmod 700 /apps/monitoring/data
 ```
 
 ### Prod-only VPS
@@ -397,6 +403,8 @@ mkdir -p /apps/source
 mkdir -p /apps/plys-webapps/prod/{current,logs}
 mkdir -p /apps/internal-hub-fe/prod/{current,logs}
 mkdir -p /apps/internal-hub-be/prod/{current,logs}
+mkdir -p /apps/monitoring/{current,data}
+chmod 700 /apps/monitoring/data
 ```
 
 ### Combined VPS (dev + prod)
@@ -409,6 +417,8 @@ mkdir -p /apps/source
 mkdir -p /apps/plys-webapps/{dev,prod}/{current,logs}
 mkdir -p /apps/internal-hub-fe/{dev,prod}/{current,logs}
 mkdir -p /apps/internal-hub-be/{dev,prod}/{current,logs}
+mkdir -p /apps/monitoring/{current,data}
+chmod 700 /apps/monitoring/data
 ```
 
 ---

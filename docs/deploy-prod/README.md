@@ -21,6 +21,7 @@ Dedicated **prod-only** host. For dev or a combined dev+prod host, use the other
 | Step | Guide |
 |------|-------|
 | Data GUI | [Adminer + Redis Insight](../vps-started/04-data-tools-adminer-redis.md) — prefer SSH tunnel on prod |
+| Monitoring | [OpenObserve](../vps-started/06-monitoring-openobserve.md) — `observe.plyshub.space` |
 | Manual deploy | [05-manual-deploy.md](../vps-started/05-manual-deploy.md) |
 | Reset | [03-cleanup-and-reset.md](../vps-started/03-cleanup-and-reset.md) §5 or §6.2 — **backup first** |
 

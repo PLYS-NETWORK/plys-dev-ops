@@ -39,13 +39,15 @@ flowchart LR
 |-------|---------|
 | [Cleanup and reset](vps-started/03-cleanup-and-reset.md) | Full or partial teardown, DB/Redis volume reset |
 | [Adminer + Redis Insight](vps-started/04-data-tools-adminer-redis.md) | Browser GUIs for Postgres/Redis |
+| [OpenObserve monitoring](vps-started/06-monitoring-openobserve.md) | Logs, traces, metrics (dev and prod) |
+| [OpenObserve KPI dashboards](openobserve-kpi-dashboards.md) | Importable SQL dashboards for org `plys` |
 | [Infra templates](vps-started/infra/README.md) | `docker-compose` + `.env.data` for `/apps` |
 
 ## Domains (reference)
 
 | Environment | Example hosts |
 |-------------|---------------|
-| Dev | `dev.ployos.com`, `dev.lonaos.com`, `dev.plyshub.space`, `db-dev.plyshub.space` |
-| Prod | `ployos.com`, `lonaos.com`, `plyshub.space`, `db.plyshub.space` |
+| Dev | `dev.ployos.com`, `dev.lonaos.com`, `dev.plyshub.space`, `db-dev.plyshub.space`, `observe-dev.plyshub.space` |
+| Prod | `ployos.com`, `lonaos.com`, `plyshub.space`, `db.plyshub.space`, `observe.plyshub.space` |
 
 See each deploy guide for the full hostname and port matrix.

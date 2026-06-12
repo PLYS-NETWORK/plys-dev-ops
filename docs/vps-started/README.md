@@ -18,6 +18,7 @@ Run these guides **before** any application deploy. They apply to dev-only, prod
 |-------|------|
 | [03-cleanup-and-reset.md](03-cleanup-and-reset.md) | Tear down apps, reset Postgres/Redis volumes, start over |
 | [04-data-tools-adminer-redis.md](04-data-tools-adminer-redis.md) | Expose Adminer / Redis Insight via nginx or SSH tunnel |
+| [06-monitoring-openobserve.md](06-monitoring-openobserve.md) | OpenObserve + OTEL Collector (logs, traces, metrics) |
 
 ## Prerequisites checklist
 

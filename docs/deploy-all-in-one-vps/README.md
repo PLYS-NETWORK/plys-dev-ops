@@ -27,6 +27,7 @@ Prefer separate dev and prod machines when possible. Use dedicated guides instea
 | Step | Guide |
 |------|-------|
 | Data GUI | [Adminer + Redis Insight](../vps-started/04-data-tools-adminer-redis.md) |
+| Monitoring | [OpenObserve](../vps-started/06-monitoring-openobserve.md) — one stack, `deploy_env: combined` |
 | Runner details | [02-self-hosted-runner.md](../vps-started/02-self-hosted-runner.md) |
 | Reset | [03-cleanup-and-reset.md](../vps-started/03-cleanup-and-reset.md) |
 | Manual deploy | [05-manual-deploy.md](../vps-started/05-manual-deploy.md) |

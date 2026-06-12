@@ -4,7 +4,7 @@
 
 Deploy **dev** stacks only on a **dedicated dev VPS** (or follow [All-in-one deploy](../deploy-all-in-one-vps/01-deploy.md) for one host with both dev and prod).
 
-**VPS setup (Node, Docker, nginx):** [Prerequisites](../vps-started/01-prerequisites.md) · **Self-hosted runner:** [Self-hosted runner](../vps-started/02-self-hosted-runner.md) · **DB/Redis GUI:** [Adminer + Redis Insight](../vps-started/04-data-tools-adminer-redis.md) · **Cleanup / DB reset:** [Cleanup and reset](../vps-started/03-cleanup-and-reset.md)
+**VPS setup (Node, Docker, nginx):** [Prerequisites](../vps-started/01-prerequisites.md) · **Self-hosted runner:** [Self-hosted runner](../vps-started/02-self-hosted-runner.md) · **DB/Redis GUI:** [Adminer + Redis Insight](../vps-started/04-data-tools-adminer-redis.md) · **Monitoring:** [OpenObserve](../vps-started/06-monitoring-openobserve.md) · **Cleanup / DB reset:** [Cleanup and reset](../vps-started/03-cleanup-and-reset.md)
 
 **GitHub Environment:** `dev` · **Branch:** `develop` · **Monorepo secrets:** [02-github-monorepos.md](02-github-monorepos.md)
 
@@ -92,6 +92,15 @@ set -a && source /apps/.env.data && set +a
 docker exec postgres-dev psql -U plys_dev -d plys-db-dev -c "SELECT current_user, current_database();"
 redis-cli -p 6380 -a "$REDIS_DEV_PASSWORD" --no-auth-warning PING
 ```
+
+### Data tools (optional)
+
+Browser GUIs for Postgres and Redis — full guide: [Adminer + Redis Insight](../vps-started/04-data-tools-adminer-redis.md).
+
+1. Containers are started in the `docker compose up` command above (`adminer`, `redisinsight`).
+2. Create nginx basic auth: `sudo htpasswd -c /etc/nginx/.htpasswd-data-tools YOUR_OPS_USER` (see data-tools guide §4).
+3. Apply nginx vhosts for `db-dev.plyshub.space` → `:8080` and `redis-dev.plyshub.space` → `:5540` (data-tools guide §4.1).
+4. Add `-d db-dev.plyshub.space -d redis-dev.plyshub.space` to the certbot command in §4.3 (or use SSH tunnel only and skip public DNS).
 
 **GitHub:** configure all three monorepos before first deploy — [02-github-monorepos.md](02-github-monorepos.md). Minimum for backend after §2 above:
 
@@ -327,11 +336,14 @@ sudo certbot --nginx \
   -d dev.lonaos.com -d app-dev.lonaos.com \
   -d dev.plyshub.space -d admin-dev.plyshub.space -d review-dev.plyshub.space \
   -d api-dev.plyshub.space \
-  -d db-dev.plyshub.space -d redis-dev.plyshub.space
+  -d db-dev.plyshub.space -d redis-dev.plyshub.space \
+  -d observe-dev.plyshub.space
 sudo certbot renew --dry-run
 ```
 
 **Optional data GUI:** configure nginx first — [Adminer + Redis Insight](../vps-started/04-data-tools-adminer-redis.md) §4. Omit `db-dev` / `redis-dev` from certbot if using SSH tunnel only.
+
+**Optional monitoring:** configure nginx for `observe-dev.plyshub.space` — [OpenObserve](../vps-started/06-monitoring-openobserve.md). Deploy after app workflows so PM2 log dirs exist.
 
 ---
 

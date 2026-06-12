@@ -1,0 +1,321 @@
+{
+  "version": 8,
+  "title": "Plys Platform KPIs",
+  "description": "Ops KPIs: throughput, errors, latency, versions (org plys)",
+  "role": "",
+  "owner": "",
+  "created": 0,
+  "tabs": [
+    {
+      "tabId": "tab-kpis",
+      "name": "KPIs",
+      "panels": [
+        {
+          "id": "platform_request_volume",
+          "type": "line",
+          "title": "Request volume (5m)",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "show_symbol": true,
+            "show_gridlines": true
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT histogram(_timestamp, '5 minute') AS ts, count(*) AS requests\nFROM \"api-gateway\"\nWHERE log_type = 'access'\nGROUP BY ts\nORDER BY ts ASC",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "api-gateway",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "breakdown": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 15,
+            "i": 0
+          }
+        },
+        {
+          "id": "platform_error_rate",
+          "type": "line",
+          "title": "5xx error rate %",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "show_symbol": true,
+            "show_gridlines": true
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT histogram(_timestamp, '5 minute') AS ts,\n  100.0 * count(CASE WHEN status_code >= 500 THEN 1 END) / count(*) AS error_rate_pct\nFROM \"api-gateway\"\nWHERE log_type = 'access'\nGROUP BY ts\nORDER BY ts ASC",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "api-gateway",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "breakdown": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 48,
+            "y": 0,
+            "w": 48,
+            "h": 15,
+            "i": 1
+          }
+        },
+        {
+          "id": "platform_p95_latency",
+          "type": "table",
+          "title": "p95 latency by path (top 10)",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "show_symbol": false,
+            "show_gridlines": true
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT path,\n  approx_percentile_cont(duration_ms, 0.95) AS p95_ms,\n  count(*) AS requests\nFROM \"api-gateway\"\nWHERE log_type = 'access' AND duration_ms IS NOT NULL AND path IS NOT NULL\nGROUP BY path\nORDER BY p95_ms DESC\nLIMIT 10",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "api-gateway",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "breakdown": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 15,
+            "w": 48,
+            "h": 15,
+            "i": 2
+          }
+        },
+        {
+          "id": "platform_http_errors_by_service",
+          "type": "bar",
+          "title": "4xx/5xx by service",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "show_symbol": false,
+            "show_gridlines": true
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT service,\n  count(CASE WHEN status_code BETWEEN 400 AND 499 THEN 1 END) AS client_errors,\n  count(CASE WHEN status_code >= 500 THEN 1 END) AS server_errors\nFROM \"default\"\nWHERE log_type = 'access' AND status_code >= 400\nGROUP BY service\nORDER BY server_errors DESC",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "default",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "breakdown": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 48,
+            "y": 15,
+            "w": 48,
+            "h": 15,
+            "i": 3
+          }
+        },
+        {
+          "id": "platform_grpc_failures",
+          "type": "line",
+          "title": "gRPC upstream failures",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "show_symbol": true,
+            "show_gridlines": true
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT histogram(_timestamp, '5 minute') AS ts, count(*) AS failures\nFROM \"default\"\nWHERE log_type = 'grpc' AND outcome = 'failure'\nGROUP BY ts\nORDER BY ts ASC",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "default",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "breakdown": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 30,
+            "w": 48,
+            "h": 15,
+            "i": 4
+          }
+        },
+        {
+          "id": "platform_active_versions",
+          "type": "table",
+          "title": "Active service versions",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "show_symbol": false,
+            "show_gridlines": true
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT service, service_version, libraries_version, count(*) AS log_lines\nFROM \"default\"\nWHERE service_version IS NOT NULL\nGROUP BY service, service_version, libraries_version\nORDER BY service, service_version DESC",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "default",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "breakdown": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 48,
+            "y": 30,
+            "w": 48,
+            "h": 15,
+            "i": 5
+          }
+        },
+        {
+          "id": "platform_errors_by_version",
+          "type": "bar",
+          "title": "Errors by service version",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "show_symbol": false,
+            "show_gridlines": true
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT service, service_version, count(*) AS errors\nFROM \"default\"\nWHERE log_type = 'error'\nGROUP BY service, service_version\nORDER BY errors DESC\nLIMIT 20",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "default",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "breakdown": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 45,
+            "w": 96,
+            "h": 15,
+            "i": 6
+          }
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "list": [],
+    "showDynamicFilters": false
+  }
+}

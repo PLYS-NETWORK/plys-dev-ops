@@ -8,6 +8,7 @@ Related deploy guides:
 
 - [Infra templates](infra/README.md) — compose + `.env.data` templates to restore after reset
 - [Adminer + Redis Insight](04-data-tools-adminer-redis.md) — Adminer + Redis Insight (recreated from compose templates)
+- [OpenObserve monitoring](06-monitoring-openobserve.md) — monitoring stack teardown and redeploy
 - [Dev deploy](../deploy-dev/01-deploy.md) — after dev reset, redo from Section 2
 - [Prod deploy](../deploy-prod/01-deploy.md) — after prod reset, redo from Section 2
 - [All-in-one deploy](../deploy-all-in-one-vps/01-deploy.md) — combined VPS, redo from Section 1.5
@@ -72,7 +73,8 @@ Use on a **combined** host (dev + prod) or when you want everything under `/apps
 cd /apps
 docker compose --env-file /apps/.env.data down 2>/dev/null || docker compose down 2>/dev/null || true
 
-docker rm -f postgres-dev postgres-prod redis-dev redis-prod adminer redisinsight 2>/dev/null || true
+docker compose -p plys-monitoring down 2>/dev/null || true
+docker rm -f postgres-dev postgres-prod redis-dev redis-prod adminer redisinsight openobserve otel-collector 2>/dev/null || true
 docker volume ls | grep -E 'postgres|redis|redisinsight'
 
 docker volume rm apps_postgres-dev-data apps_postgres-prod-data apps_redis-dev-data apps_redis-prod-data apps_redisinsight-data 2>/dev/null || true
@@ -104,10 +106,11 @@ docker stop $(docker ps -q) 2>/dev/null || true
 
 cd /apps
 docker compose --env-file /apps/.env.data down 2>/dev/null || true
-docker rm -f postgres-dev redis-dev adminer redisinsight 2>/dev/null || true
+docker compose -p plys-monitoring down 2>/dev/null || true
+docker rm -f postgres-dev redis-dev adminer redisinsight openobserve otel-collector 2>/dev/null || true
 docker volume rm apps_postgres-dev-data apps_redis-dev-data apps_redisinsight-data 2>/dev/null || true
 
-sudo rm -rf /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be /apps/environments
+sudo rm -rf /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be /apps/environments /apps/monitoring
 sudo rm -f /apps/docker-compose.yml /apps/.env.data
 
 ls -la /apps
@@ -127,10 +130,11 @@ docker stop $(docker ps -q) 2>/dev/null || true
 
 cd /apps
 docker compose --env-file /apps/.env.data down 2>/dev/null || true
-docker rm -f postgres-prod redis-prod adminer redisinsight 2>/dev/null || true
+docker compose -p plys-monitoring down 2>/dev/null || true
+docker rm -f postgres-prod redis-prod adminer redisinsight openobserve otel-collector 2>/dev/null || true
 docker volume rm apps_postgres-prod-data apps_redis-prod-data apps_redisinsight-data 2>/dev/null || true
 
-sudo rm -rf /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be /apps/environments
+sudo rm -rf /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be /apps/environments /apps/monitoring
 sudo rm -f /apps/docker-compose.yml /apps/.env.data
 
 ls -la /apps

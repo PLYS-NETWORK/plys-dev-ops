@@ -1,0 +1,76 @@
+# OTEL Collector — ships OTLP + PM2 file logs to OpenObserve.
+# Auth: Authorization header uses OPENOBSERVE_AUTH_B64 from deploy .env (never commit secrets).
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  filelog:
+    include:
+      - /host/internal-hub-be/*/logs/*-out.log
+      - /host/internal-hub-be/*/logs/*-error.log
+      - /host/internal-hub-fe/*/logs/*-out.log
+      - /host/internal-hub-fe/*/logs/*-error.log
+      - /host/plys-webapps/*/logs/*-out.log
+      - /host/plys-webapps/*/logs/*-error.log
+    start_at: end
+    poll_interval: 500ms
+    include_file_path: true
+    include_file_name: true
+    operators:
+      - type: regex_parser
+        id: parse_log_path
+        regex: '^/host/(?P<service_namespace>[^/]+)/(?P<deploy_env>[^/]+)/logs/(?P<service_name>[^-]+)-(?P<log_stream>out|error)\.log$'
+        parse_from: attributes["log.file.path"]
+        on_error: send_quiet
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: ${env:DEPLOY_ENV}
+        action: upsert
+
+  transform/filelog_service:
+    log_statements:
+      - context: log
+        statements:
+          - set(resource.attributes["service.name"], attributes["service_name"]) where attributes["service_name"] != nil
+          - set(resource.attributes["service.namespace"], attributes["service_namespace"]) where attributes["service_namespace"] != nil
+          - set(resource.attributes["deployment.environment"], attributes["deploy_env"]) where attributes["deploy_env"] != nil
+          - set(attributes["log.stream"], attributes["log_stream"]) where attributes["log_stream"] != nil
+
+exporters:
+  otlphttp/openobserve:
+    endpoint: http://openobserve:5080/api/${env:OPENOBSERVE_ORG}
+    headers:
+      Authorization: Basic ${env:OPENOBSERVE_AUTH_B64}
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [otlphttp/openobserve]
+    logs:
+      receivers: [otlp, filelog]
+      processors: [batch, resource, transform/filelog_service]
+      exporters: [otlphttp/openobserve]
+    metrics:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [otlphttp/openobserve]
+
+  telemetry:
+    logs:
+      level: info

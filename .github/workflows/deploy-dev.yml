@@ -1,0 +1,96 @@
+name: Deploy monitoring — Dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy (default: main)'
+        required: false
+        default: 'main'
+      deploy_env:
+        description: 'DEPLOY_ENV value (dev or combined for all-in-one VPS)'
+        required: false
+        default: 'dev'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy OpenObserve to Dev VPS
+    runs-on:
+      group: plys-dev-runners
+      labels: [self-hosted, linux, x64, plys-dev-vps]
+    environment: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Prepare deploy bundle
+        env:
+          OPENOBSERVE_ROOT_PASSWORD: ${{ secrets.OPENOBSERVE_ROOT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          DEPLOY_ENV="${{ github.event.inputs.deploy_env }}"
+          if [ "$DEPLOY_ENV" != "dev" ] && [ "$DEPLOY_ENV" != "combined" ]; then
+            echo "Invalid deploy_env: $DEPLOY_ENV (expected dev or combined)"
+            exit 1
+          fi
+          DEPLOY_DIR="/apps/monitoring/current"
+          mkdir -p "$DEPLOY_DIR"
+          cp monitoring/docker-compose.yml "$DEPLOY_DIR/"
+          cp monitoring/otel-collector-config.yaml "$DEPLOY_DIR/"
+          node scripts/render-monitoring-env.mjs \
+            --deploy-env "$DEPLOY_ENV" \
+            --output "$DEPLOY_DIR/.env"
+          chmod 600 "$DEPLOY_DIR/.env"
+          ls -la "$DEPLOY_DIR/"
+
+      - name: Deploy on VPS
+        run: |
+          set -euo pipefail
+          DEPLOY_DIR="/apps/monitoring/current"
+          DATA_DIR="/apps/monitoring/data"
+
+          mkdir -p "$DEPLOY_DIR" "$DATA_DIR"
+
+          cd "$DEPLOY_DIR"
+          docker compose -p plys-monitoring --env-file .env pull
+          docker compose -p plys-monitoring --env-file .env up -d
+
+          echo "==> Wait for OpenObserve (host health probe)"
+          ready=0
+          for i in $(seq 1 90); do
+            if curl -sf http://127.0.0.1:5080/health >/dev/null 2>&1 \
+              || curl -sf http://127.0.0.1:5080/healthz >/dev/null 2>&1; then
+              echo "openobserve ready after ${i} attempt(s)"
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "openobserve failed to become healthy"
+            docker logs openobserve --tail 100 || true
+            docker compose -p plys-monitoring --env-file .env ps
+            exit 1
+          fi
+
+          echo "==> Container status"
+          docker compose -p plys-monitoring --env-file .env ps
+
+          echo "✓ Monitoring stack deployed to dev VPS"
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          {
+            echo "## Deploy monitoring — Dev succeeded"
+            echo "- Branch: \`${{ github.event.inputs.branch }}\`"
+            echo "- DEPLOY_ENV: \`${{ github.event.inputs.deploy_env }}\`"
+            echo "- Target: \`/apps/monitoring/current\` on dev VPS"
+            echo "- UI: \`https://observe-dev.plyshub.space\` (after nginx + DNS)"
+            echo "- Actor: @${{ github.actor }}"
+          } >> "$GITHUB_STEP_SUMMARY"
