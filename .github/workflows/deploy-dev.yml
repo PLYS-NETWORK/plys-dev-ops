@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to deploy (default: main)'
+        description: 'Branch to deploy (default: develop)'
         required: false
-        default: 'main'
+        default: 'develop'
       deploy_env:
         description: 'DEPLOY_ENV value (dev or combined for all-in-one VPS)'
         required: false

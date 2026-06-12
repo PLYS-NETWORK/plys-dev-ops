@@ -52,7 +52,7 @@ Root email is fixed: `huuphuc9410@gmail.com` (not a secret).
 
 Workflow renders `.env`, copies bundle to `/apps/monitoring/current`, runs `docker compose up -d`.
 
-**Runner workflow access** (org `PLYS-NETWORK`): add `plys-dev-ops` to each runner group and allow `deploy-dev.yml` / `deploy-prod.yml` — [docs/vps-started/02-self-hosted-runner.md §4.7](../docs/vps-started/02-self-hosted-runner.md#47-workflow-access--full-copy-paste-lists).
+**Runner workflow access** (org `PLYS-NETWORK`): add `plys-dev-ops` to each runner group; allow `deploy-dev.yml` on `develop` (`plys-dev-runners`) and `deploy-prod.yml` on `main` (`plys-prod-runners`) — [docs/vps-started/02-self-hosted-runner.md §4.7](../docs/vps-started/02-self-hosted-runner.md#47-workflow-access--full-copy-paste-lists).
 
 ## Manual debug on VPS
 

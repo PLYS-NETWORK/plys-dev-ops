@@ -67,10 +67,10 @@ Do **not** use `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, or `VPS_SSH_PORT` — depl
 
 | Runner group | Workflow |
 |--------------|----------|
-| `plys-dev-runners` | `PLYS-NETWORK/plys-dev-ops/.github/workflows/deploy-dev.yml@refs/heads/main` |
+| `plys-dev-runners` | `PLYS-NETWORK/plys-dev-ops/.github/workflows/deploy-dev.yml@refs/heads/develop` |
 | `plys-prod-runners` | `PLYS-NETWORK/plys-dev-ops/.github/workflows/deploy-prod.yml@refs/heads/main` |
 
-Full copy-paste lists (22 workflows per group): [Self-hosted runner §4.7](02-self-hosted-runner.md#47-workflow-access--full-copy-paste-lists).
+Run **Deploy monitoring — Dev** from branch **`develop`** (not `main`). Full copy-paste lists (22 per group): [Self-hosted runner §4.7](02-self-hosted-runner.md#47-workflow-access--full-copy-paste-lists).
 
 Generate a safe password (run once per environment):
 
