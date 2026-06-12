@@ -15,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 
 const ROOT_EMAIL = 'huuphuc9410@gmail.com';
-const VALID_DEPLOY_ENVS = new Set(['dev', 'prod']);
+const VALID_DEPLOY_ENVS = new Set(['dev', 'prod', 'combined']);
 
 function parseArgs(argv) {
   let deployEnv = 'dev';
@@ -28,7 +28,7 @@ function parseArgs(argv) {
     } else if (arg === '--output' && argv[i + 1]) {
       output = argv[++i];
     } else if (arg === '--help' || arg === '-h') {
-      console.log(`Usage: OPENOBSERVE_ROOT_PASSWORD=... node scripts/render-monitoring-env.mjs --deploy-env dev|prod [--output path]`);
+      console.log(`Usage: OPENOBSERVE_ROOT_PASSWORD=... node scripts/render-monitoring-env.mjs --deploy-env dev|prod|combined [--output path]`);
       process.exit(0);
     }
   }
@@ -80,7 +80,7 @@ function main() {
   const { deployEnv, output } = parseArgs(process.argv);
 
   if (!VALID_DEPLOY_ENVS.has(deployEnv)) {
-    throw new Error(`Invalid --deploy-env "${deployEnv}" (expected dev or prod).`);
+    throw new Error(`Invalid --deploy-env "${deployEnv}" (expected dev, prod, or combined).`);
   }
 
   const password = process.env.OPENOBSERVE_ROOT_PASSWORD ?? '';

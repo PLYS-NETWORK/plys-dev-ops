@@ -19,14 +19,14 @@ node scripts/generate-kpi-dashboards.mjs
 ## Prerequisites
 
 1. Backend deployed with audit logging (Pino + `AppLogger.audit()`).
-2. OpenObserve running on the VPS ([`vps-monitoring-openobserve.md`](vps-monitoring-openobserve.md)).
+2. OpenObserve running on the VPS ([`vps-started/06-monitoring-openobserve.md`](vps-started/06-monitoring-openobserve.md)).
 3. At least 10+ minutes of traffic so panels have data.
 
 ---
 
-## Import on dev (`observe-dev.lona.my`)
+## Import on dev (`observe-dev.plyshub.space`)
 
-1. Sign in to **https://observe-dev.lona.my** with `huuphuc9410@gmail.com` and the dev `OPENOBSERVE_ROOT_PASSWORD`.
+1. Sign in to **https://observe-dev.plyshub.space** with `huuphuc9410@gmail.com` and the dev `OPENOBSERVE_ROOT_PASSWORD`.
 2. Confirm org **`plys`** is selected.
 3. **Dashboards** → create folder **`plys-kpis`** (or use an existing folder).
 4. For each JSON file in `monitoring/dashboards/`:
@@ -36,9 +36,9 @@ node scripts/generate-kpi-dashboards.mjs
 
 ---
 
-## Import on prod (`observe.lona.my`)
+## Import on prod (`observe.plyshub.space`)
 
-Repeat the same steps on **https://observe.lona.my** using the **production** `OPENOBSERVE_ROOT_PASSWORD`. Dev and prod are separate instances — import on both after validating SQL on dev.
+Repeat the same steps on **https://observe.plyshub.space** using the **production** `OPENOBSERVE_ROOT_PASSWORD`. Dev and prod are separate instances — import on both after validating SQL on dev.
 
 ---
 

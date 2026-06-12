@@ -1,8 +1,21 @@
-# Prod VPS only — copy to /apps/docker-compose.yml
-# Postgres plys-db :5432, Redis :6379
-# Adminer :8080, Redis Insight :5540 (loopback; see vps-data-tools-adminer-redis-insight.md)
+# Copy to /apps/docker-compose.yml on the VPS.
+# Postgres + Redis only — application stacks use separate compose bundles under /apps/*/current.
+# Adminer :8080, Redis Insight :5540 (loopback; see docs/vps-started/04-data-tools-adminer-redis.md)
 
 services:
+  postgres-dev:
+    image: postgres:16-alpine
+    container_name: postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: plys_dev
+      POSTGRES_PASSWORD: "${POSTGRES_DEV_PASSWORD:?set POSTGRES_DEV_PASSWORD}"
+      POSTGRES_DB: plys-db-dev
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+
   postgres-prod:
     image: postgres:16-alpine
     container_name: postgres-prod
@@ -15,6 +28,16 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - postgres-prod-data:/var/lib/postgresql/data
+
+  redis-dev:
+    image: redis:7-alpine
+    container_name: redis-dev
+    restart: unless-stopped
+    command: redis-server --requirepass "${REDIS_DEV_PASSWORD:?set REDIS_DEV_PASSWORD}"
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - redis-dev-data:/data
 
   redis-prod:
     image: redis:7-alpine
@@ -31,17 +54,19 @@ services:
     container_name: adminer
     restart: unless-stopped
     depends_on:
+      - postgres-dev
       - postgres-prod
     ports:
       - "127.0.0.1:8080:8080"
     environment:
-      ADMINER_DEFAULT_SERVER: postgres-prod
+      ADMINER_DEFAULT_SERVER: postgres-dev
 
   redisinsight:
     image: redis/redisinsight:latest
     container_name: redisinsight
     restart: unless-stopped
     depends_on:
+      - redis-dev
       - redis-prod
     ports:
       - "127.0.0.1:5540:5540"
@@ -49,6 +74,8 @@ services:
       - redisinsight-data:/data
 
 volumes:
+  postgres-dev-data:
   postgres-prod-data:
+  redis-dev-data:
   redis-prod-data:
   redisinsight-data:

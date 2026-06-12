@@ -1,14 +1,17 @@
 # VPS cleanup and database reset
 
+**Track:** [vps-started](README.md) · Maintenance · [Docs index](../README.md)
+
 Destructive operations on the **VPS only**. Use before a greenfield deploy or when you need a fresh Postgres/Redis without reinstalling the OS.
 
 Related deploy guides:
 
-- [infra/README.md](infra/README.md) — compose + `.env.data` templates to restore after reset
-- [vps-data-tools-adminer-redis-insight.md](vps-data-tools-adminer-redis-insight.md) — Adminer + Redis Insight (recreated from compose templates)
-- [vps-deployment-dev.md](vps-deployment-dev.md) — after dev reset, redo from Section 2
-- [vps-deployment-prod.md](vps-deployment-prod.md) — after prod reset, redo from Section 2
-- [vps-end-to-end-deployment.md](vps-end-to-end-deployment.md) — combined VPS, redo from Section 1.5
+- [Infra templates](infra/README.md) — compose + `.env.data` templates to restore after reset
+- [Adminer + Redis Insight](04-data-tools-adminer-redis.md) — Adminer + Redis Insight (recreated from compose templates)
+- [OpenObserve monitoring](06-monitoring-openobserve.md) — monitoring stack teardown and redeploy
+- [Dev deploy](../deploy-dev/01-deploy.md) — after dev reset, redo from Section 2
+- [Prod deploy](../deploy-prod/01-deploy.md) — after prod reset, redo from Section 2
+- [All-in-one deploy](../deploy-all-in-one-vps/01-deploy.md) — combined VPS, redo from Section 1.5
 
 ---
 
@@ -18,7 +21,7 @@ Related deploy guides:
 |--------|------|
 | Remove Docker volumes | **All DB data lost** for that environment |
 | `pm2 kill` | Stops all app processes |
-| `rm -rf /apps/plys-webapps` | Removes deploy bundles; GitHub Actions must redeploy |
+| `rm -rf /apps/plys-webapps` | Removes deploy bundles; rerun the matching self-hosted runner deploy |
 | Delete `/apps/.env.data` | You must regenerate passwords and update GitHub secrets |
 
 ---
@@ -70,7 +73,8 @@ Use on a **combined** host (dev + prod) or when you want everything under `/apps
 cd /apps
 docker compose --env-file /apps/.env.data down 2>/dev/null || docker compose down 2>/dev/null || true
 
-docker rm -f postgres-dev postgres-prod redis-dev redis-prod adminer redisinsight 2>/dev/null || true
+docker compose -p plys-monitoring down 2>/dev/null || true
+docker rm -f postgres-dev postgres-prod redis-dev redis-prod adminer redisinsight openobserve otel-collector 2>/dev/null || true
 docker volume ls | grep -E 'postgres|redis|redisinsight'
 
 docker volume rm apps_postgres-dev-data apps_postgres-prod-data apps_redis-dev-data apps_redis-prod-data apps_redisinsight-data 2>/dev/null || true
@@ -88,7 +92,7 @@ ls -la /apps
 
 **Do not** delete `/etc/nginx` or `/etc/letsencrypt` unless you intend to reissue TLS certs.
 
-**Next:** recreate dirs and data layer — [vps-end-to-end-deployment.md](vps-end-to-end-deployment.md) Section 1.5–1.6, or dev/prod guides Section 2–3.
+**Next:** recreate dirs and data layer — [All-in-one deploy](../deploy-all-in-one-vps/01-deploy.md) Section 1.5–1.6, or dev/prod guides Section 2–3.
 
 ---
 
@@ -102,16 +106,17 @@ docker stop $(docker ps -q) 2>/dev/null || true
 
 cd /apps
 docker compose --env-file /apps/.env.data down 2>/dev/null || true
-docker rm -f postgres-dev redis-dev adminer redisinsight 2>/dev/null || true
+docker compose -p plys-monitoring down 2>/dev/null || true
+docker rm -f postgres-dev redis-dev adminer redisinsight openobserve otel-collector 2>/dev/null || true
 docker volume rm apps_postgres-dev-data apps_redis-dev-data apps_redisinsight-data 2>/dev/null || true
 
-sudo rm -rf /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be /apps/environments
+sudo rm -rf /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be /apps/environments /apps/monitoring
 sudo rm -f /apps/docker-compose.yml /apps/.env.data
 
 ls -la /apps
 ```
 
-**Next:** [vps-deployment-dev.md](vps-deployment-dev.md) from Section 2.
+**Next:** [Dev deploy](../deploy-dev/01-deploy.md) from Section 2.
 
 ---
 
@@ -125,16 +130,17 @@ docker stop $(docker ps -q) 2>/dev/null || true
 
 cd /apps
 docker compose --env-file /apps/.env.data down 2>/dev/null || true
-docker rm -f postgres-prod redis-prod adminer redisinsight 2>/dev/null || true
+docker compose -p plys-monitoring down 2>/dev/null || true
+docker rm -f postgres-prod redis-prod adminer redisinsight openobserve otel-collector 2>/dev/null || true
 docker volume rm apps_postgres-prod-data apps_redis-prod-data apps_redisinsight-data 2>/dev/null || true
 
-sudo rm -rf /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be /apps/environments
+sudo rm -rf /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be /apps/environments /apps/monitoring
 sudo rm -f /apps/docker-compose.yml /apps/.env.data
 
 ls -la /apps
 ```
 
-**Next:** [vps-deployment-prod.md](vps-deployment-prod.md) from Section 2.
+**Next:** [Prod deploy](../deploy-prod/01-deploy.md) from Section 2.
 
 ---
 
@@ -166,7 +172,7 @@ sleep 5
 docker exec postgres-dev psql -U plys_dev -d plys-db-dev -c "SELECT current_user, current_database();"
 ```
 
-**After empty DB:** rerun backend deploy with migrations — GitHub **Deploy Dev** on `plys-internal-hub-serivce-api` (`run-migrations: true`).
+**After empty DB:** rerun backend deploy with migrations — GitHub **Deploy Dev** on `plys-internal-hub-serivce-api` using the `plys-dev-vps` runner (`run-migrations: true`).
 
 ### 6.2 Prod database (`plys-db`)
 
@@ -187,7 +193,7 @@ sleep 5
 docker exec postgres-prod psql -U plys_prod -d plys-db -c "SELECT current_user, current_database();"
 ```
 
-**After empty DB:** GitHub **Deploy Prod** on backend with migrations.
+**After empty DB:** GitHub **Deploy Prod** on backend with migrations using the `plys-prod-vps` runner.
 
 ### 6.3 Both databases (combined VPS)
 
@@ -245,34 +251,7 @@ redis-cli -p 6379 -a "$REDIS_PROD_PASSWORD" --no-auth-warning PING
 
 ---
 
-## 8. Reset monitoring only (optional)
-
-**On VPS** — does not touch app DBs or application bundles:
-
-```bash
-cd /apps/monitoring/current 2>/dev/null || exit 0
-docker compose -p plys-monitoring --env-file .env down 2>/dev/null || true
-
-# Remove OpenObserve data (destructive — logs/traces in OpenObserve are lost)
-rm -rf /apps/monitoring/data/*
-
-# Redeploy from GitHub Actions (plys-dev-ops → Deploy monitoring — Dev/Prod)
-# Or manually: copy bundle to /apps/monitoring/current and docker compose up -d
-```
-
-To reset only containers (keep ingested data):
-
-```bash
-cd /apps/monitoring/current
-docker compose -p plys-monitoring --env-file .env down
-docker compose -p plys-monitoring --env-file .env up -d
-```
-
-See [vps-monitoring-openobserve.md](vps-monitoring-openobserve.md) for full setup.
-
----
-
-## 9. Inspect Docker state (troubleshooting)
+## 8. Inspect Docker state (troubleshooting)
 
 **On VPS:**
 
@@ -286,27 +265,23 @@ pm2 list
 
 ---
 
-## 10. Recreate empty app directories (after full cleanup)
+## 9. Recreate empty app directories (after full cleanup)
 
-**On VPS:**
+Use the matching block from [Prerequisites §4](01-prerequisites.md#4-create-apps-layout) or [§3.5.4](01-prerequisites.md#354-create-deploy-directories-and-grant-runner-access) (mkdir first, then `chown`).
+
+**On VPS** — combined VPS example:
 
 ```bash
-# Combined VPS
+sudo mkdir -p /apps/source
 sudo mkdir -p /apps/plys-webapps/{dev,prod}/{current,logs}
 sudo mkdir -p /apps/internal-hub-fe/{dev,prod}/{current,logs}
 sudo mkdir -p /apps/internal-hub-be/{dev,prod}/{current,logs}
 
-# Dev-only VPS
-# mkdir -p /apps/plys-webapps/dev/{current,logs}
-# mkdir -p /apps/internal-hub-fe/dev/{current,logs}
-# mkdir -p /apps/internal-hub-be/dev/{current,logs}
+# Self-hosted runner:
+# sudo chown -R github-runner:github-runner /apps/source /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be
 
-# Prod-only VPS
-# mkdir -p /apps/plys-webapps/prod/{current,logs}
-# mkdir -p /apps/internal-hub-fe/prod/{current,logs}
-# mkdir -p /apps/internal-hub-be/prod/{current,logs}
-
-sudo chown -R "$USER:$USER" /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be 2>/dev/null || true
+# Manual deploy:
+sudo chown -R "$USER:$USER" /apps/source /apps/plys-webapps /apps/internal-hub-fe /apps/internal-hub-be
 ```
 
 Then follow the deploy guide for your environment.

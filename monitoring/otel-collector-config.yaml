@@ -45,6 +45,7 @@ processors:
         statements:
           - set(resource.attributes["service.name"], attributes["service_name"]) where attributes["service_name"] != nil
           - set(resource.attributes["service.namespace"], attributes["service_namespace"]) where attributes["service_namespace"] != nil
+          - set(resource.attributes["deployment.environment"], attributes["deploy_env"]) where attributes["deploy_env"] != nil
           - set(attributes["log.stream"], attributes["log_stream"]) where attributes["log_stream"] != nil
 
 exporters:

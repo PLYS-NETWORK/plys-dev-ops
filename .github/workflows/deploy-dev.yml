@@ -7,6 +7,10 @@ on:
         description: 'Branch to deploy (default: main)'
         required: false
         default: 'main'
+      deploy_env:
+        description: 'DEPLOY_ENV value (dev or combined for all-in-one VPS)'
+        required: false
+        default: 'dev'
 
 permissions:
   contents: read
@@ -14,7 +18,9 @@ permissions:
 jobs:
   deploy:
     name: Deploy OpenObserve to Dev VPS
-    runs-on: ubuntu-latest
+    runs-on:
+      group: plys-dev-runners
+      labels: [self-hosted, linux, x64, plys-dev-vps]
     environment: dev
     steps:
       - name: Checkout code
@@ -27,79 +33,55 @@ jobs:
           OPENOBSERVE_ROOT_PASSWORD: ${{ secrets.OPENOBSERVE_ROOT_PASSWORD }}
         run: |
           set -euo pipefail
-          rm -rf monitoring-upload
-          mkdir -p monitoring-upload
-          cp monitoring/docker-compose.yml monitoring-upload/
-          cp monitoring/otel-collector-config.yaml monitoring-upload/
-          node scripts/render-monitoring-env.mjs --deploy-env dev --output monitoring-upload/monitoring.env
-          ls -la monitoring-upload/
-
-      - name: Upload to VPS
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-        run: |
-          set -euo pipefail
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          ssh -p "$VPS_PORT" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
-            "$VPS_USER@$VPS_HOST" "mkdir -p /apps/monitoring/current"
-          scp -P "$VPS_PORT" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
-            monitoring-upload/docker-compose.yml \
-            monitoring-upload/otel-collector-config.yaml \
-            monitoring-upload/monitoring.env \
-            "$VPS_USER@$VPS_HOST:/apps/monitoring/current/"
+          DEPLOY_ENV="${{ github.event.inputs.deploy_env }}"
+          if [ "$DEPLOY_ENV" != "dev" ] && [ "$DEPLOY_ENV" != "combined" ]; then
+            echo "Invalid deploy_env: $DEPLOY_ENV (expected dev or combined)"
+            exit 1
+          fi
+          DEPLOY_DIR="/apps/monitoring/current"
+          mkdir -p "$DEPLOY_DIR"
+          cp monitoring/docker-compose.yml "$DEPLOY_DIR/"
+          cp monitoring/otel-collector-config.yaml "$DEPLOY_DIR/"
+          node scripts/render-monitoring-env.mjs \
+            --deploy-env "$DEPLOY_ENV" \
+            --output "$DEPLOY_DIR/.env"
+          chmod 600 "$DEPLOY_DIR/.env"
+          ls -la "$DEPLOY_DIR/"
 
       - name: Deploy on VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_SSH_PORT }}
-          script: |
-            set -euo pipefail
-            DEPLOY_DIR="/apps/monitoring/current"
-            DATA_DIR="/apps/monitoring/data"
+        run: |
+          set -euo pipefail
+          DEPLOY_DIR="/apps/monitoring/current"
+          DATA_DIR="/apps/monitoring/data"
 
-            mkdir -p "$DEPLOY_DIR" "$DATA_DIR"
-            if [ -f "$DEPLOY_DIR/monitoring.env" ]; then
-              mv -f "$DEPLOY_DIR/monitoring.env" "$DEPLOY_DIR/.env"
+          mkdir -p "$DEPLOY_DIR" "$DATA_DIR"
+
+          cd "$DEPLOY_DIR"
+          docker compose -p plys-monitoring --env-file .env pull
+          docker compose -p plys-monitoring --env-file .env up -d
+
+          echo "==> Wait for OpenObserve (host health probe)"
+          ready=0
+          for i in $(seq 1 90); do
+            if curl -sf http://127.0.0.1:5080/health >/dev/null 2>&1 \
+              || curl -sf http://127.0.0.1:5080/healthz >/dev/null 2>&1; then
+              echo "openobserve ready after ${i} attempt(s)"
+              ready=1
+              break
             fi
-            if [ -f "$DEPLOY_DIR/.env" ]; then
-              chmod 600 "$DEPLOY_DIR/.env"
-            fi
-
-            cd "$DEPLOY_DIR"
-            docker compose -p plys-monitoring --env-file .env pull
-            docker compose -p plys-monitoring --env-file .env up -d
-
-            echo "==> Wait for OpenObserve (host health probe)"
-            ready=0
-            for i in $(seq 1 90); do
-              if curl -sf http://127.0.0.1:5080/health >/dev/null 2>&1 \
-                || curl -sf http://127.0.0.1:5080/healthz >/dev/null 2>&1; then
-                echo "openobserve ready after ${i} attempt(s)"
-                ready=1
-                break
-              fi
-              sleep 2
-            done
-            if [ "$ready" -ne 1 ]; then
-              echo "openobserve failed to become healthy"
-              docker logs openobserve --tail 100 || true
-              docker compose -p plys-monitoring --env-file .env ps
-              exit 1
-            fi
-
-            echo "==> Container status"
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "openobserve failed to become healthy"
+            docker logs openobserve --tail 100 || true
             docker compose -p plys-monitoring --env-file .env ps
+            exit 1
+          fi
 
-            echo "✓ Monitoring stack deployed to dev VPS"
+          echo "==> Container status"
+          docker compose -p plys-monitoring --env-file .env ps
+
+          echo "✓ Monitoring stack deployed to dev VPS"
 
       - name: Deployment summary
         if: success()
@@ -107,7 +89,8 @@ jobs:
           {
             echo "## Deploy monitoring — Dev succeeded"
             echo "- Branch: \`${{ github.event.inputs.branch }}\`"
+            echo "- DEPLOY_ENV: \`${{ github.event.inputs.deploy_env }}\`"
             echo "- Target: \`/apps/monitoring/current\` on dev VPS"
-            echo "- UI: \`https://observe-dev.lona.my\` (after nginx + DNS)"
+            echo "- UI: \`https://observe-dev.plyshub.space\` (after nginx + DNS)"
             echo "- Actor: @${{ github.actor }}"
           } >> "$GITHUB_STEP_SUMMARY"

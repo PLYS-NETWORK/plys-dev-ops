@@ -1,6 +1,6 @@
 # Deployed to /apps/monitoring/current via GitHub Actions.
 # Data persists in /apps/monitoring/data (host bind mount).
-# Loopback-only ports — expose UI via nginx (observe-dev.lona.my / observe.lona.my).
+# Loopback-only ports — expose UI via nginx (observe-dev.plyshub.space / observe.plyshub.space).
 
 # Isolate from app stacks that also use a "current" deploy directory (default project name).
 name: plys-monitoring

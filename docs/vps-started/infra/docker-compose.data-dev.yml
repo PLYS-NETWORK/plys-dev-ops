@@ -1,6 +1,6 @@
 # Dev VPS only — copy to /apps/docker-compose.yml
 # Postgres plys-db-dev :5433, Redis :6380
-# Adminer :8080, Redis Insight :5540 (loopback; see vps-data-tools-adminer-redis-insight.md)
+# Adminer :8080, Redis Insight :5540 (loopback; see docs/vps-started/04-data-tools-adminer-redis.md)
 
 services:
   postgres-dev:
