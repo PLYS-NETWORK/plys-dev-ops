@@ -115,6 +115,25 @@ sudo usermod -aG docker "$USER"
 
 Log out and SSH back in so the `docker` group applies.
 
+### 2.3 Nginx proxy buffer sizes
+
+Next.js and auth-heavy apps can return large `Set-Cookie` response headers. Without larger proxy buffers, nginx logs **`upstream sent too big header while reading response header from upstream`** and returns **502** to clients.
+
+**On VPS** — install once (template: [infra/nginx/proxy-buffers.conf](infra/nginx/proxy-buffers.conf)):
+
+```bash
+sudo tee /etc/nginx/conf.d/proxy-buffers.conf > /dev/null <<'NGINX'
+# Upstream apps (Next.js, auth cookies) may exceed default 4k/8k header buffers
+proxy_buffer_size 128k;
+proxy_buffers 4 256k;
+proxy_busy_buffers_size 256k;
+NGINX
+
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Already deployed? Re-run the block above on the VPS, then retry the failing URL (e.g. `https://app-dev.ployos.com/en/dashboard`).
+
 ---
 
 ## 3. Node.js toolchain (nvm → Node 22 → pnpm → PM2)
@@ -505,6 +524,8 @@ For a full greenfield combined host, use [All-in-one deploy](../deploy-all-in-on
 | `pnpm: command not found`                        | Re-run Section 3.3 under Node 22 (`nvm use 22`)                                      |
 | `nvm: command not found` in new shell            | Run `source ~/.bashrc` or re-login after Section 3.1                                 |
 | nginx fails `nginx -t`                           | Remove broken symlinks in `/etc/nginx/sites-enabled/` before first deploy            |
+| `upstream sent too big header` (502 on app URLs) | Install [§2.3 proxy buffers](01-prerequisites.md#23-nginx-proxy-buffer-sizes); reload nginx |
+| `connect() failed (111: Connection refused)`     | Upstream app not listening (check PM2/Docker on the mapped port, e.g. `:3021`)       |
 | Old Node from apt conflicts with nvm             | Use `which node` — prefer nvm path under `~/.nvm`                                    |
 | `github-runner` cannot run `docker`              | `sudo usermod -aG docker github-runner`, then restart runner service                 |
 | CI job cannot find `node`/`pnpm`/`pm2`           | Install toolchain under `github-runner` (Section 3.5.2), not only admin user         |

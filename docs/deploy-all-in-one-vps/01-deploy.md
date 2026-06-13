@@ -521,7 +521,7 @@ Env examples:
 
 ### 4.1 Host packages
 
-Complete **[Prerequisites](../vps-started/01-prerequisites.md)** first (Node 22, Docker, nginx, PM2, pnpm, `/apps` layout).
+Complete **[Prerequisites](../vps-started/01-prerequisites.md)** first (Node 22, Docker, nginx, PM2, pnpm, `/apps` layout, [proxy buffer sizes](../vps-started/01-prerequisites.md#23-nginx-proxy-buffer-sizes)).
 
 ### 4.2 Nginx — all application hostnames
 

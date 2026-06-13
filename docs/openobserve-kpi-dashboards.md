@@ -73,13 +73,150 @@ If a panel is empty after import:
 
 ---
 
-## Starter alerts (configure in OpenObserve UI)
+## Alert: API 5xx rate → Slack
 
-| Alert | Condition (SQL / filter) |
-|-------|---------------------------|
-| High 5xx rate | `log_type = 'access'`, `status_code >= 500`, count over threshold per 5m on `api-gateway` |
-| Login failure spike | `log_type = 'audit' AND action = 'login' AND outcome = 'failure'` |
-| Webhook failures | `log_type = 'audit' AND event_category = 'finance' AND outcome = 'failure'` |
+Send a Slack message when the **api-gateway** 5xx error rate exceeds a threshold. Uses the same semantics as the **5xx error rate %** panel in [Platform KPIs](monitoring/dashboards/platform-kpis.json).
+
+Configure **dev** and **prod** separately — each OpenObserve instance (`observe-dev.plyshub.space` / `observe.plyshub.space`) needs its own Slack webhook, destination, and alert rule.
+
+```mermaid
+flowchart LR
+  subgraph apps [VPS apps]
+    ApiGateway[api-gateway logs]
+    Collector[otel-collector]
+    OO[OpenObserve org plys]
+    ApiGateway --> Collector --> OO
+  end
+  subgraph alerting [OpenObserve alerting]
+    Rule[Scheduled SQL alert]
+    Dest[Webhook destination]
+    Template[Slack JSON template]
+    Rule --> Dest
+    Dest --> Template
+  end
+  OO --> Rule
+  Dest --> Slack[Slack Incoming Webhook]
+```
+
+### Prerequisites
+
+1. Monitoring stack running — [OpenObserve setup](vps-started/06-monitoring-openobserve.md) (org **`plys`**, OTEL collector ingesting PM2 logs).
+2. [Platform KPIs imported on dev](#import-on-dev-observe-devplyshubspace); **5xx error rate %** panel returns data for stream **`api-gateway`**.
+3. Access logs include structured fields **`log_type = 'access'`** and **`status_code`**. Phase 1 filelog may not expose these until backend OTLP / audit logging (Phase 2 in [06-monitoring-openobserve.md](vps-started/06-monitoring-openobserve.md#instrument-backend-services-phase-2)) — verify in **Logs** before creating the alert.
+4. Two Slack channels (recommended): e.g. `#plys-alerts-dev` and `#plys-alerts-prod`. Store webhook URLs in a password manager — **never commit** them to git.
+
+### Step 1 — Slack Incoming Webhook
+
+**In Slack** (once per channel):
+
+1. [Create a Slack app](https://api.slack.com/apps) (or reuse an existing ops app).
+2. **Features → Incoming Webhooks** → toggle **On**.
+3. **Add New Webhook to Workspace** → pick the channel (`#plys-alerts-dev` or `#plys-alerts-prod`).
+4. Copy the webhook URL (`https://hooks.slack.com/services/...`).
+
+Repeat for the second environment if dev and prod use different channels.
+
+### Step 2 — Notification template (OpenObserve)
+
+**In OpenObserve** (org **`plys`**) — repeat on dev and prod hosts:
+
+1. **Management → Templates → Add Template**.
+2. **Type:** Webhook.
+3. **Name:** e.g. `SlackAlertPlys` (no spaces or special characters).
+4. **Body** (Slack expects JSON with a `text` field):
+
+```json
+{
+  "text": ":rotating_light: [{org_name}] {alert_name}\nStream: {stream_name}\nType: {alert_type}\nPeriod: {alert_period}\nThreshold: {alert_threshold}\nTriggered: {alert_trigger_time}"
+}
+```
+
+5. **Save**.
+
+Reference: [OpenObserve alert destinations](https://openobserve.ai/docs/user-guide/account-administration/management/alert-destinations/).
+
+### Step 3 — Alert destination (Webhook → Slack)
+
+1. **Management → Alert Destinations → Add Destination → Webhook**.
+2. Fill in:
+
+| Field | Dev example | Prod example |
+|-------|-------------|--------------|
+| **Name** | `SlackPlysDev` | `SlackPlysProd` |
+| **Template** | `SlackAlertPlys` | `SlackAlertPlys` |
+| **URL** | Dev Slack webhook URL | Prod Slack webhook URL |
+| **Method** | `POST` | `POST` |
+
+Destination names must not contain spaces, commas, or `: / ? #` (per OpenObserve rules).
+
+3. **Save**. Use **Test** if the UI offers it — confirm a message appears in the Slack channel.
+
+### Step 4 — Alert rule (scheduled SQL)
+
+1. **Alerts → Add Alert → Scheduled**.
+2. **General:**
+   - **Name:** `API 5xx rate high` (or `API 5xx rate high - dev` / `- prod`)
+   - **Folder:** `plys-kpis` (create under **Alerts** if needed)
+   - **Stream type:** Logs
+   - **Stream:** `api-gateway`
+3. **Conditions → SQL** tab. Paste (do not use `SELECT *`):
+
+```sql
+SELECT
+  100.0 * count(CASE WHEN status_code >= 500 THEN 1 END) / count(*) AS error_rate_pct,
+  count(*) AS total_requests,
+  count(CASE WHEN status_code >= 500 THEN 1 END) AS errors_5xx
+FROM "api-gateway"
+WHERE log_type = 'access'
+HAVING error_rate_pct > 1.0 AND total_requests >= 10
+```
+
+The query returns **one row** when the 5xx rate exceeds **1%** with at least **10** requests in the evaluation window. Tune `1.0` and `total_requests` for your traffic (raise the minimum on prod to reduce noise).
+
+4. **Threshold and schedule:**
+
+| Setting | Dev | Prod |
+|---------|-----|------|
+| Check every | 5 minutes | 5 minutes |
+| Period | Last 15 minutes | Last 15 minutes |
+| Alert if row count | `>= 1` | `>= 1` |
+| Silence / cooldown | 15–30 minutes | 15–30 minutes |
+| **Destinations** | `SlackPlysDev` | `SlackPlysProd` |
+
+5. **Save** and enable the alert.
+
+Reference: [OpenObserve scheduled alerts](https://openobserve.ai/docs/user-guide/analytics/alerts/scheduled-alerts/).
+
+### Step 5 — Verify
+
+1. Confirm **Logs → `api-gateway`** has recent `log_type = 'access'` rows with `status_code`.
+2. Open **Platform KPIs → 5xx error rate %** — chart should match alert logic.
+3. Optionally trigger a test (temporary lower threshold, or known 5xx in dev).
+4. Check **Alerts → History** for firings.
+5. Confirm the Slack channel received the message.
+
+Repeat Steps 2–5 on **prod** (`observe.plyshub.space`) with the prod webhook and `SlackPlysProd`.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| No Slack message | Test webhook URL with `curl -X POST -H 'Content-Type: application/json' -d '{"text":"test"}' '<webhook-url>'`; re-check destination name and template |
+| Alert never fires | **Logs** → `api-gateway` — confirm `log_type` and `status_code` exist; lower `error_rate_pct` threshold temporarily on dev |
+| Stream not found | Deploy apps + monitoring first; see [06-monitoring-openobserve.md](vps-started/06-monitoring-openobserve.md) |
+| Repeated Slack spam | Increase silence / cooldown period |
+| Dev alert on prod data | Each host is isolated — create separate rules on `observe-dev` vs `observe` |
+
+---
+
+## Other starter alerts
+
+Use the same **Template → Destination → Alert** pattern as [above](#alert-api-5xx-rate--slack). Swap the SQL / filters:
+
+| Alert | Stream | Condition (SQL / filter) |
+|-------|--------|---------------------------|
+| Login failure spike | `identity-service` | `log_type = 'audit' AND action = 'login' AND outcome = 'failure'` |
+| Webhook failures | `finance-service` | `log_type = 'audit' AND event_category = 'finance' AND outcome = 'failure'` |
 
 ---
 

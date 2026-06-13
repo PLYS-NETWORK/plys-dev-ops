@@ -10,6 +10,7 @@ Copy these files to the VPS with `sudo nano` (paste contents from this folder). 
 | [env.data.example](env.data.example) | `/apps/.env.data` | Combined VPS (fill passwords) |
 | [env.data.dev.example](env.data.dev.example) | `/apps/.env.data` | Dev-only VPS |
 | [env.data.prod.example](env.data.prod.example) | `/apps/.env.data` | Prod-only VPS |
+| [nginx/proxy-buffers.conf](nginx/proxy-buffers.conf) | `/etc/nginx/conf.d/proxy-buffers.conf` | All VPS (fixes large upstream response headers) |
 
 **Data GUI (optional):** compose templates include **Adminer** (`127.0.0.1:8080`) and **Redis Insight** (`127.0.0.1:5540`). Setup: [Adminer + Redis Insight](../04-data-tools-adminer-redis.md).
 

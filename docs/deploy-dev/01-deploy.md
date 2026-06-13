@@ -135,9 +135,16 @@ Runner-owned host: ownership was set in Prerequisites §3.5.4 — do not `chown`
 
 **Prerequisites on VPS:** `sudo apt install -y nginx certbot python3-certbot-nginx`
 
-**On VPS** — run the full block below (one `sites-available` file per dev FQDN; API uses `/api` rewrite). Ports match the table in Section “Domains (dev)”.
+**On VPS** — run the full block below (proxy buffers + one `sites-available` file per dev FQDN; API uses `/api` rewrite). Ports match the table in Section “Domains (dev)”.
 
 ```bash
+# --- proxy buffers (Next.js / large Set-Cookie response headers) ---
+sudo tee /etc/nginx/conf.d/proxy-buffers.conf > /dev/null <<'NGINX'
+proxy_buffer_size 128k;
+proxy_buffers 4 256k;
+proxy_busy_buffers_size 256k;
+NGINX
+
 # --- dev.ployos.com → :3001 (ployos-marketing) ---
 sudo tee /etc/nginx/sites-available/dev.ployos.com > /dev/null <<'NGINX'
 server {
@@ -152,6 +159,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
         proxy_read_timeout 120s;
     }
 }
@@ -172,6 +182,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
         proxy_read_timeout 120s;
     }
 }
@@ -192,6 +205,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
         proxy_read_timeout 120s;
     }
 }
@@ -212,6 +228,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
         proxy_read_timeout 120s;
     }
 }
@@ -232,6 +251,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
         proxy_read_timeout 120s;
     }
 }
@@ -252,6 +274,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
         proxy_read_timeout 120s;
     }
 }
@@ -272,6 +297,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
         proxy_read_timeout 120s;
     }
 }
@@ -294,6 +322,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
         proxy_read_timeout 86400s;
         proxy_send_timeout 86400s;
     }
@@ -307,6 +338,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
         proxy_read_timeout 86400s;
         proxy_send_timeout 86400s;
     }
@@ -322,6 +356,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 60s;
     }
