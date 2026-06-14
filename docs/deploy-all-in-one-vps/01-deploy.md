@@ -29,7 +29,7 @@ Per-repo CI details:
 |----------|------------|---------|
 | `/apps/plys-webapps/{dev,prod}/current` | plys-monorepo-webapps | 4 Next.js apps (Docker + PM2) |
 | `/apps/internal-hub-fe/{dev,prod}/current` | plys-internal-hub | 3 Next.js apps |
-| `/apps/internal-hub-be/{dev,prod}/current` | plys-internal-hub-serivce-api | api-gateway + 9 gRPC services |
+| `/apps/internal-hub-be/{dev,prod}/current` | plys-internal-hub-serivce-api | api-gateway + 10 gRPC services (11 total) |
 | `/apps/docker-compose.yml` | [docs/vps-started/infra/](../vps-started/infra/README.md) | Postgres + Redis (dev **and** prod) |
 
 Postgres/Redis are **not** started by application compose files on the VPS; they run from `/apps/docker-compose.yml`.

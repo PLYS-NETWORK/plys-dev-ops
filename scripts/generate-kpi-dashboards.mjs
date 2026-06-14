@@ -12,6 +12,13 @@ import { dashboardV8, sqlPanel } from '../monitoring/dashboards/_panel-helper.mj
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'monitoring', 'dashboards');
 
+const ORG_API = 'internal-hub-api';
+const ORG_FE = {
+  'internal-hub-fe': 'internal-hub-fe',
+  'ployos-fe': 'ployos-fe',
+  'lonaos-fe': 'lonaos-fe',
+};
+
 /** Assign 1-based layout.i per panel (OpenObserve v8 requires i64, not 0). */
 function panels(...specs) {
   return specs.map((spec, index) =>
@@ -21,8 +28,8 @@ function panels(...specs) {
 
 const platform = dashboardV8({
   dashboardId: '7435756711840870401',
-  title: 'Plys Platform KPIs',
-  description: 'Ops KPIs: throughput, errors, latency, versions (org plys)',
+  title: 'Platform KPIs',
+  description: `Ops KPIs: throughput, errors, latency, versions (org ${ORG_API})`,
   panels: panels(
     {
       id: 'platform_request_volume',
@@ -120,8 +127,8 @@ LIMIT 20`,
 
 const securityAudit = dashboardV8({
   dashboardId: '7435756711840870402',
-  title: 'Plys Security & Audit KPIs',
-  description: 'Auth funnel, admin actions, failed login offenders (org plys)',
+  title: 'Security & Audit KPIs',
+  description: `Auth funnel, admin actions, failed login offenders (org ${ORG_API})`,
   panels: panels(
     {
       id: 'audit_login_outcomes',
@@ -191,8 +198,8 @@ LIMIT 15`,
 
 const business = dashboardV8({
   dashboardId: '7435756711840870403',
-  title: 'Plys Business KPIs',
-  description: 'Finance, projects, notifications volume (org plys)',
+  title: 'Business KPIs',
+  description: `Finance, projects, notifications volume (org ${ORG_API})`,
   panels: panels(
     {
       id: 'biz_withdraw_volume',
@@ -261,10 +268,66 @@ ORDER BY ts ASC`,
   ),
 });
 
+function feErrorsWarnings(org, dashboardId) {
+  const orgLabel = ORG_FE[org] ?? org;
+  return dashboardV8({
+    dashboardId,
+    title: 'Errors & Warnings',
+    description: `Frontend warn/error volume (org ${orgLabel})`,
+    panels: panels(
+      {
+        id: `${org}_warn_error_volume`,
+        title: 'Warn + error volume (15m)',
+        type: 'line',
+        stream: 'default',
+        sql: `SELECT histogram(_timestamp, '15 minute') AS ts,
+  count(CASE WHEN level = 'warn' OR severity_text = 'WARN' THEN 1 END) AS warnings,
+  count(CASE WHEN level = 'error' OR severity_text = 'ERROR' THEN 1 END) AS errors
+FROM "default"
+WHERE level IN ('warn', 'error') OR severity_text IN ('WARN', 'ERROR')
+GROUP BY ts
+ORDER BY ts ASC`,
+        layout: { x: 0, y: 0, w: 48, h: 15 },
+      },
+      {
+        id: `${org}_errors_by_service`,
+        title: 'Errors by service',
+        type: 'bar',
+        stream: 'default',
+        sql: `SELECT service, count(*) AS errors
+FROM "default"
+WHERE level = 'error' OR severity_text = 'ERROR' OR log_type = 'error'
+GROUP BY service
+ORDER BY errors DESC`,
+        layout: { x: 48, y: 0, w: 48, h: 15 },
+      },
+      {
+        id: `${org}_recent_errors`,
+        title: 'Recent errors (top 50)',
+        type: 'table',
+        stream: 'default',
+        sql: `SELECT _timestamp, service, message, log_type, severity_text
+FROM "default"
+WHERE level = 'error' OR severity_text = 'ERROR' OR log_type IN ('error', 'unhandled')
+ORDER BY _timestamp DESC
+LIMIT 50`,
+        layout: { x: 0, y: 15, w: 96, h: 20 },
+      },
+    ),
+  });
+}
+
+const feDashboards = [
+  ['fe-errors-warnings-internal-hub-fe', feErrorsWarnings('internal-hub-fe', '7435756711840870404')],
+  ['fe-errors-warnings-ployos-fe', feErrorsWarnings('ployos-fe', '7435756711840870405')],
+  ['fe-errors-warnings-lonaos-fe', feErrorsWarnings('lonaos-fe', '7435756711840870406')],
+];
+
 for (const [name, payload] of [
   ['platform-kpis', platform],
   ['security-audit-kpis', securityAudit],
   ['business-kpis', business],
+  ...feDashboards,
 ]) {
   const path = join(outDir, `${name}.json`);
   writeFileSync(path, `${JSON.stringify(payload, null, 2)}\n`);

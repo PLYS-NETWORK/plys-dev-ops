@@ -23,12 +23,12 @@ Related: [Dev deploy](../deploy-dev/01-deploy.md) · [Prod deploy](../deploy-pro
 | Runner | `plys-dev-vps` | `plys-prod-vps` | whichever host runs the stack |
 | `DEPLOY_ENV` in bundle | `dev` | `prod` | `combined` (filelog uses path segment) |
 | App log paths | `/apps/*/{bundle}/dev/logs/` | `/apps/*/{bundle}/prod/logs/` | both |
-| OpenObserve org | `plys` | `plys` | `plys` |
+| OpenObserve orgs | `internal-hub-api`, `internal-hub-fe`, `ployos-fe`, `lonaos-fe` | same | same |
 | Password secret | `OPENOBSERVE_ROOT_PASSWORD` in `dev` | `OPENOBSERVE_ROOT_PASSWORD` in `production` | same as host role |
 
 **Root email (all environments):** `huuphuc9410@gmail.com`
 
-**KPI dashboards:** import SQL dashboards from [openobserve-kpi-dashboards.md](../openobserve-kpi-dashboards.md) into org `plys`.
+**KPI dashboards:** import SQL dashboards from [openobserve-kpi-dashboards.md](../openobserve-kpi-dashboards.md) into the matching org (`internal-hub-api` for backend KPIs; FE orgs for error dashboards).
 
 ---
 
@@ -45,7 +45,7 @@ NestJS OTLP (Phase 2)          ──► OTEL Collector (:4318 loopback)
                                               └─► observe.plyshub.space      (prod)
 ```
 
-- **Org:** `plys` on each VPS (instances are physically isolated on dedicated hosts).
+- **Orgs:** four product orgs on each VPS — `internal-hub-api`, `internal-hub-fe`, `ployos-fe`, `lonaos-fe`. OTEL collector routes by `service.name` / `service.namespace` (legacy org `plys` is retired after migration).
 - **Per-service streams:** `service.name` from log filename or OTEL resource attributes.
 - **`deployment.environment`:** `dev` or `prod` from log path on combined VPS; otherwise from `DEPLOY_ENV` env var.
 
@@ -94,6 +94,13 @@ Password rotation requires clearing `/apps/monitoring/data` — see [monitoring/
 ---
 
 ## 1. VPS prep
+
+Create OpenObserve orgs after first stack deploy (or before importing dashboards):
+
+```bash
+set -a && source /apps/monitoring/current/.env && set +a
+node /path/to/plys-dev-ops/scripts/bootstrap-openobserve-orgs.mjs
+```
 
 **On VPS:**
 
@@ -243,10 +250,15 @@ cd /apps/monitoring/current
 docker compose -p plys-monitoring --env-file .env ps
 
 set -a && source /apps/monitoring/current/.env && set +a
-curl -sf -u "huuphuc9410@gmail.com:${ZO_ROOT_USER_PASSWORD}" \
-  -H "Content-Type: application/json" \
-  -d '{"level":"info","message":"auth smoke test"}' \
-  "http://127.0.0.1:5080/api/plys/default/_json" && echo " ingest OK"
+for org in internal-hub-api internal-hub-fe ployos-fe lonaos-fe; do
+  curl -sf -u "huuphuc9410@gmail.com:${ZO_ROOT_USER_PASSWORD}" \
+    -H "Content-Type: application/json" \
+    -d "{\"level\":\"info\",\"message\":\"auth smoke test: ${org}\"}" \
+    "http://127.0.0.1:5080/api/${org}/default/_json" && echo " ingest OK: ${org}"
+done
+
+# Or bootstrap all orgs via script (after first OpenObserve deploy):
+# node /path/to/plys-dev-ops/scripts/bootstrap-openobserve-orgs.mjs
 
 ls /apps/internal-hub-be/dev/logs/api-gateway-out*.log 2>/dev/null && echo " backend logs present"
 ```
@@ -258,7 +270,7 @@ ls /apps/internal-hub-be/dev/logs/api-gateway-out*.log 2>/dev/null && echo " bac
 - [ ] DNS resolves to correct VPS IP
 - [ ] `curl -sf http://127.0.0.1:5080/health`
 - [ ] HTTPS UI login works
-- [ ] Logs visible for at least `api-gateway` (org `plys`)
+- [ ] Logs visible for at least `api-gateway` in org **`internal-hub-api`**
 - [ ] `.env` on VPS is mode `600`: `ls -la /apps/monitoring/current/.env`
 
 ---
@@ -278,19 +290,21 @@ See also [All-in-one deploy](../deploy-all-in-one-vps/01-deploy.md).
 
 ## Service inventory (`service.name`)
 
-| Bundle | Services |
-|--------|----------|
-| `plys-webapps` | `ployos-marketing`, `lonaos-marketing`, `ployos-app`, `lonaos-app` |
-| `internal-hub-fe` | `internal-hub`, `internal-admin-hub`, `internal-task-reviewer` |
-| `internal-hub-be` | `api-gateway`, `identity-service`, `business-service`, `consultant-service`, `internal-admin-service`, `internal-task-reviewer-service`, `finance-service`, `notifications-service`, `platform-service`, `ai-agents-service` |
+PM2 log filenames use a **stable service slug** (no API/deploy version suffix). Version is carried in structured field `service_version`.
 
-**Phase 1 (filelog):** PM2 logs at `/apps/{bundle}/{dev|prod}/logs/{service}-{out|error}[-{id}].log` (collector matches both plain and PM2 instance-id suffixes).
+| Bundle | OpenObserve org | Services |
+|--------|-----------------|----------|
+| `plys-webapps` | `ployos-fe` / `lonaos-fe` | `ployos-marketing`, `ployos-app` → `ployos-fe`; `lonaos-marketing`, `lonaos-app` → `lonaos-fe` |
+| `internal-hub-fe` | `internal-hub-fe` | `internal-hub`, `internal-admin-hub`, `internal-task-reviewer` |
+| `internal-hub-be` | `internal-hub-api` | `api-gateway`, `identity-service`, `business-service`, `consultant-service`, `internal-admin-service`, `internal-task-reviewer-service`, `finance-service`, `notifications-service`, `platform-service`, `ai-agents-service`, `ai-model-service` |
+
+**Phase 1 (filelog):** PM2 logs at `/apps/{bundle}/{dev|prod}/logs/{service}-{out|error}[-{id}].log` (`{-{id}}` is PM2 instance id, not version).
 
 ---
 
 ## Querying logs
 
-In OpenObserve UI (org `plys`):
+In OpenObserve UI — select org first (`internal-hub-api`, `internal-hub-fe`, `ployos-fe`, or `lonaos-fe`):
 
 | Goal | Filter / field |
 |------|----------------|
@@ -309,7 +323,7 @@ Scope: `plys-internal-hub-service-api` only. Frontend OTEL is deferred.
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://172.17.0.1:4318` | `http://172.17.0.1:4318` |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` | `http/protobuf` |
 | `OTEL_RESOURCE_ATTRIBUTES` | `service.namespace=internal-hub-be,deployment.environment=dev` | `service.namespace=internal-hub-be,deployment.environment=prod` |
-| `OTEL_SERVICE_NAME` | Per container in `docker-compose.apps.yml` | Same |
+| `OTEL_SERVICE_NAME` | Stable slug per container (e.g. `ai-model-service`) — **no** `-v1` / semver suffix | Same |
 
 Verify Docker host gateway: `ip route | grep default` (often `172.17.0.1`).
 
@@ -321,7 +335,7 @@ Verify Docker host gateway: `ip route | grep default` (often `172.17.0.1`).
 |---------|-----|
 | UI login fails | First boot only — clear `/apps/monitoring/data`, redeploy workflow |
 | Empty log streams | `ls /apps/internal-hub-be/dev/logs/` (or `prod/logs/`) — deploy apps first; expect `*-out-*.log` from PM2 |
-| Dashboard **stream not found** | Redeploy monitoring after `otel-collector-config.yaml` update; generate traffic (`curl` health + use apps); confirm org **`plys`** |
+| Dashboard **stream not found** | Redeploy monitoring after `otel-collector-config.yaml` update; generate traffic; confirm correct org (`internal-hub-api` for backend streams) |
 | Collector 401 | `docker compose -p plys-monitoring logs otel-collector` — check `OPENOBSERVE_AUTH_B64` |
 | Wrong environment data | On combined VPS, filter by `deployment_environment`; on dedicated VPS use matching observe hostname |
 | Port conflict | `ss -tlnp \| grep 5080` — not `:3100`/`:3200` (internal-hub FE) |

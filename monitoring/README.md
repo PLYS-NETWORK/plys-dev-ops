@@ -4,16 +4,32 @@ Docker Compose bundle for **OpenObserve** + **OTEL Collector**, deployed to each
 
 Full guide: [docs/vps-started/06-monitoring-openobserve.md](../docs/vps-started/06-monitoring-openobserve.md)
 
-KPI dashboards (import JSON into org `plys`): [docs/openobserve-kpi-dashboards.md](../docs/openobserve-kpi-dashboards.md)
+KPI dashboards: [docs/openobserve-kpi-dashboards.md](../docs/openobserve-kpi-dashboards.md)
+
+## OpenObserve orgs
+
+| Org | Routes from |
+|-----|-------------|
+| `internal-hub-api` | `internal-hub-be` bundle (11 backend services) |
+| `internal-hub-fe` | `internal-hub-fe` bundle (3 Next.js apps) |
+| `ployos-fe` | `ployos-marketing`, `ployos-app` |
+| `lonaos-fe` | `lonaos-marketing`, `lonaos-app` |
+
+Bootstrap on VPS:
+
+```bash
+set -a && source /apps/monitoring/current/.env && set +a
+node /path/to/plys-dev-ops/scripts/bootstrap-openobserve-orgs.mjs
+```
 
 ## Files
 
 | File | Purpose |
 |------|---------|
 | [docker-compose.yml](docker-compose.yml) | OpenObserve UI `:5080`, OTEL Collector `:4317`/`:4318` (loopback) |
-| [otel-collector-config.yaml](otel-collector-config.yaml) | OTLP + PM2 filelog (`*-out-*.log` / `*-error-*.log`) → OpenObserve org `plys` |
+| [otel-collector-config.yaml](otel-collector-config.yaml) | OTLP + PM2 filelog → four OpenObserve orgs (routing connector) |
 | [env.example](env.example) | Non-secret template; password filled by CI |
-| [dashboards/](dashboards/) | Importable OpenObserve KPI dashboard JSON (`platform-kpis`, `security-audit-kpis`, `business-kpis`) |
+| [dashboards/](dashboards/) | Importable KPI + FE error dashboard JSON |
 
 ## First-time VPS prep (once per VPS)
 
@@ -83,3 +99,4 @@ curl -sf http://127.0.0.1:5080/health
 2. Backup then clear `/apps/monitoring/data`
 3. Update `OPENOBSERVE_ROOT_PASSWORD` in GitHub
 4. Re-run deploy workflow
+5. Re-run `scripts/bootstrap-openobserve-orgs.mjs` and re-import dashboards

@@ -1,8 +1,8 @@
 {
   "version": 8,
   "dashboardId": "7435756711840870402",
-  "title": "Plys Security & Audit KPIs",
-  "description": "Auth funnel, admin actions, failed login offenders (org plys)",
+  "title": "Security & Audit KPIs",
+  "description": "Auth funnel, admin actions, failed login offenders (org internal-hub-api)",
   "role": "",
   "owner": "",
   "tabs": [

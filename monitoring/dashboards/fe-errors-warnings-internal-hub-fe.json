@@ -1,0 +1,159 @@
+{
+  "version": 8,
+  "dashboardId": "7435756711840870404",
+  "title": "Errors & Warnings",
+  "description": "Frontend warn/error volume (org internal-hub-fe)",
+  "role": "",
+  "owner": "",
+  "tabs": [
+    {
+      "tabId": "tab-kpis",
+      "name": "KPIs",
+      "panels": [
+        {
+          "id": "internal-hub-fe_warn_error_volume",
+          "type": "line",
+          "title": "Warn + error volume (15m)",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "show_symbol": true,
+            "show_gridlines": true
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT histogram(_timestamp, '15 minute') AS ts,\n  count(CASE WHEN level = 'warn' OR severity_text = 'WARN' THEN 1 END) AS warnings,\n  count(CASE WHEN level = 'error' OR severity_text = 'ERROR' THEN 1 END) AS errors\nFROM \"default\"\nWHERE level IN ('warn', 'error') OR severity_text IN ('WARN', 'ERROR')\nGROUP BY ts\nORDER BY ts ASC",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "default",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "breakdown": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 15,
+            "i": 1
+          },
+          "htmlContent": "",
+          "markdownContent": ""
+        },
+        {
+          "id": "internal-hub-fe_errors_by_service",
+          "type": "bar",
+          "title": "Errors by service",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "show_symbol": false,
+            "show_gridlines": true
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT service, count(*) AS errors\nFROM \"default\"\nWHERE level = 'error' OR severity_text = 'ERROR' OR log_type = 'error'\nGROUP BY service\nORDER BY errors DESC",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "default",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "breakdown": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 48,
+            "y": 0,
+            "w": 48,
+            "h": 15,
+            "i": 2
+          },
+          "htmlContent": "",
+          "markdownContent": ""
+        },
+        {
+          "id": "internal-hub-fe_recent_errors",
+          "type": "table",
+          "title": "Recent errors (top 50)",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "show_symbol": false,
+            "show_gridlines": true
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT _timestamp, service, message, log_type, severity_text\nFROM \"default\"\nWHERE level = 'error' OR severity_text = 'ERROR' OR log_type IN ('error', 'unhandled')\nORDER BY _timestamp DESC\nLIMIT 50",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "default",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "breakdown": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 15,
+            "w": 96,
+            "h": 20,
+            "i": 3
+          },
+          "htmlContent": "",
+          "markdownContent": ""
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "list": [],
+    "showDynamicFilters": false
+  },
+  "defaultDatetimeDuration": {
+    "type": "relative",
+    "relativeTimePeriod": "15m"
+  }
+}

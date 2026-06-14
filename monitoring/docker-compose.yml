@@ -33,7 +33,6 @@ services:
     environment:
       DEPLOY_ENV: ${DEPLOY_ENV:?set DEPLOY_ENV}
       OPENOBSERVE_AUTH_B64: ${OPENOBSERVE_AUTH_B64:?set OPENOBSERVE_AUTH_B64}
-      OPENOBSERVE_ORG: ${OPENOBSERVE_ORG:-plys}
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
       - /apps/internal-hub-be:/host/internal-hub-be:ro

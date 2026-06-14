@@ -1,8 +1,8 @@
 {
   "version": 8,
   "dashboardId": "7435756711840870401",
-  "title": "Plys Platform KPIs",
-  "description": "Ops KPIs: throughput, errors, latency, versions (org plys)",
+  "title": "Platform KPIs",
+  "description": "Ops KPIs: throughput, errors, latency, versions (org internal-hub-api)",
   "role": "",
   "owner": "",
   "tabs": [

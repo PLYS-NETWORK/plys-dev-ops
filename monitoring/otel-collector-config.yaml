@@ -1,4 +1,4 @@
-# OTEL Collector — ships OTLP + PM2 file logs to OpenObserve.
+# OTEL Collector — ships OTLP + PM2 file logs to OpenObserve (4 orgs).
 # Auth: Authorization header uses OPENOBSERVE_AUTH_B64 from deploy .env (never commit secrets).
 
 receivers:
@@ -10,7 +10,7 @@ receivers:
         endpoint: 0.0.0.0:4318
 
   filelog:
-    # PM2 default: {service}-out-{id}.log / {service}-error-{id}.log (also plain -out.log)
+    # PM2: {service}-out[-{id}].log / {service}-error[-{id}].log (stable service slug, no version suffix)
     include:
       - /host/internal-hub-be/*/logs/*-out*.log
       - /host/internal-hub-be/*/logs/*-error*.log
@@ -29,6 +29,10 @@ receivers:
         id: parse_log_path
         regex: '^/host/(?P<service_namespace>[^/]+)/(?P<deploy_env>[^/]+)/logs/(?P<service_name>.+)-(?P<log_stream>out|error)(?:-(?P<pm2_id>\d+))?\.log$'
         parse_from: attributes["log.file.path"]
+        on_error: send_quiet
+      - type: json_parser
+        id: parse_json_body
+        parse_from: body
         on_error: send_quiet
 
 processors:
@@ -51,9 +55,105 @@ processors:
           - set(resource.attributes["deployment.environment"], attributes["deploy_env"]) where attributes["deploy_env"] != nil
           - set(attributes["log.stream"], attributes["log_stream"]) where attributes["log_stream"] != nil
 
+  transform/severity:
+    log_statements:
+      - context: log
+        statements:
+          # String level from structured JSON logs
+          - set(severity_text, ConvertCase(attributes["level"], "upper")) where IsString(attributes["level"])
+          - set(severity_number, 5) where attributes["level"] == "debug"
+          - set(severity_number, 9) where attributes["level"] == "info"
+          - set(severity_number, 13) where attributes["level"] == "warn"
+          - set(severity_number, 17) where attributes["level"] == "error"
+          - set(severity_number, 21) where attributes["level"] == "fatal"
+          # Pino numeric level (10 trace, 20 debug, 30 info, 40 warn, 50 error, 60 fatal)
+          - set(severity_text, "DEBUG") where attributes["level"] == 20
+          - set(severity_number, 5) where attributes["level"] == 20
+          - set(severity_text, "INFO") where attributes["level"] == 30
+          - set(severity_number, 9) where attributes["level"] == 30
+          - set(severity_text, "WARN") where attributes["level"] == 40
+          - set(severity_number, 13) where attributes["level"] == 40
+          - set(severity_text, "ERROR") where attributes["level"] == 50
+          - set(severity_number, 17) where attributes["level"] == 50
+          - set(severity_text, "FATAL") where attributes["level"] == 60
+          - set(severity_number, 21) where attributes["level"] == 60
+
+connectors:
+  routing/logs:
+    error_mode: ignore
+    default_pipelines: [logs/out-internal-hub-api]
+    table:
+      - context: resource
+        condition: IsMatch(resource.attributes["service.name"], "^ployos-")
+        pipelines: [logs/out-ployos-fe]
+      - context: resource
+        condition: IsMatch(resource.attributes["service.name"], "^lonaos-")
+        pipelines: [logs/out-lonaos-fe]
+      - context: resource
+        condition: resource.attributes["service.namespace"] == "internal-hub-fe"
+        pipelines: [logs/out-internal-hub-fe]
+      - context: resource
+        condition: resource.attributes["service.namespace"] == "internal-hub-be"
+        pipelines: [logs/out-internal-hub-api]
+
+  routing/traces:
+    error_mode: ignore
+    default_pipelines: [traces/out-internal-hub-api]
+    table:
+      - context: resource
+        condition: IsMatch(resource.attributes["service.name"], "^ployos-")
+        pipelines: [traces/out-ployos-fe]
+      - context: resource
+        condition: IsMatch(resource.attributes["service.name"], "^lonaos-")
+        pipelines: [traces/out-lonaos-fe]
+      - context: resource
+        condition: resource.attributes["service.namespace"] == "internal-hub-fe"
+        pipelines: [traces/out-internal-hub-fe]
+      - context: resource
+        condition: resource.attributes["service.namespace"] == "internal-hub-be"
+        pipelines: [traces/out-internal-hub-api]
+
+  routing/metrics:
+    error_mode: ignore
+    default_pipelines: [metrics/out-internal-hub-api]
+    table:
+      - context: resource
+        condition: IsMatch(resource.attributes["service.name"], "^ployos-")
+        pipelines: [metrics/out-ployos-fe]
+      - context: resource
+        condition: IsMatch(resource.attributes["service.name"], "^lonaos-")
+        pipelines: [metrics/out-lonaos-fe]
+      - context: resource
+        condition: resource.attributes["service.namespace"] == "internal-hub-fe"
+        pipelines: [metrics/out-internal-hub-fe]
+      - context: resource
+        condition: resource.attributes["service.namespace"] == "internal-hub-be"
+        pipelines: [metrics/out-internal-hub-api]
+
 exporters:
-  otlphttp/openobserve:
-    endpoint: http://openobserve:5080/api/${env:OPENOBSERVE_ORG}
+  otlphttp/internal_hub_api:
+    endpoint: http://openobserve:5080/api/internal-hub-api
+    headers:
+      Authorization: Basic ${env:OPENOBSERVE_AUTH_B64}
+    tls:
+      insecure: true
+
+  otlphttp/internal_hub_fe:
+    endpoint: http://openobserve:5080/api/internal-hub-fe
+    headers:
+      Authorization: Basic ${env:OPENOBSERVE_AUTH_B64}
+    tls:
+      insecure: true
+
+  otlphttp/ployos_fe:
+    endpoint: http://openobserve:5080/api/ployos-fe
+    headers:
+      Authorization: Basic ${env:OPENOBSERVE_AUTH_B64}
+    tls:
+      insecure: true
+
+  otlphttp/lonaos_fe:
+    endpoint: http://openobserve:5080/api/lonaos-fe
     headers:
       Authorization: Basic ${env:OPENOBSERVE_AUTH_B64}
     tls:
@@ -61,18 +161,68 @@ exporters:
 
 service:
   pipelines:
-    traces:
-      receivers: [otlp]
-      processors: [batch, resource]
-      exporters: [otlphttp/openobserve]
-    logs:
+    logs/in:
       receivers: [otlp, filelog]
-      processors: [batch, resource, transform/filelog_service]
-      exporters: [otlphttp/openobserve]
-    metrics:
+      processors: [batch, resource, transform/filelog_service, transform/severity]
+      exporters: [routing/logs]
+
+    logs/out-internal-hub-api:
+      receivers: [routing/logs]
+      exporters: [otlphttp/internal_hub_api]
+
+    logs/out-internal-hub-fe:
+      receivers: [routing/logs]
+      exporters: [otlphttp/internal_hub_fe]
+
+    logs/out-ployos-fe:
+      receivers: [routing/logs]
+      exporters: [otlphttp/ployos_fe]
+
+    logs/out-lonaos-fe:
+      receivers: [routing/logs]
+      exporters: [otlphttp/lonaos_fe]
+
+    traces/in:
       receivers: [otlp]
       processors: [batch, resource]
-      exporters: [otlphttp/openobserve]
+      exporters: [routing/traces]
+
+    traces/out-internal-hub-api:
+      receivers: [routing/traces]
+      exporters: [otlphttp/internal_hub_api]
+
+    traces/out-internal-hub-fe:
+      receivers: [routing/traces]
+      exporters: [otlphttp/internal_hub_fe]
+
+    traces/out-ployos-fe:
+      receivers: [routing/traces]
+      exporters: [otlphttp/ployos_fe]
+
+    traces/out-lonaos-fe:
+      receivers: [routing/traces]
+      exporters: [otlphttp/lonaos_fe]
+
+    metrics/in:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [routing/metrics]
+
+    metrics/out-internal-hub-api:
+      receivers: [routing/metrics]
+      exporters: [otlphttp/internal_hub_api]
+
+    metrics/out-internal-hub-fe:
+      receivers: [routing/metrics]
+      exporters: [otlphttp/internal_hub_fe]
+
+    metrics/out-ployos-fe:
+      receivers: [routing/metrics]
+      exporters: [otlphttp/ployos_fe]
+
+    metrics/out-lonaos-fe:
+      receivers: [routing/metrics]
+      exporters: [otlphttp/lonaos_fe]
 
   telemetry:
     logs:

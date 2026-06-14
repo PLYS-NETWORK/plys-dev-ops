@@ -1,8 +1,8 @@
 {
   "version": 8,
   "dashboardId": "7435756711840870403",
-  "title": "Plys Business KPIs",
-  "description": "Finance, projects, notifications volume (org plys)",
+  "title": "Business KPIs",
+  "description": "Finance, projects, notifications volume (org internal-hub-api)",
   "role": "",
   "owner": "",
   "tabs": [

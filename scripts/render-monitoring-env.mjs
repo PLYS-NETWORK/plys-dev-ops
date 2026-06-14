@@ -68,7 +68,7 @@ function serializeEnv(vars) {
     `ZO_ROOT_USER_EMAIL=${vars.ZO_ROOT_USER_EMAIL}`,
     `ZO_ROOT_USER_PASSWORD=${vars.ZO_ROOT_USER_PASSWORD}`,
     `OPENOBSERVE_AUTH_B64=${vars.OPENOBSERVE_AUTH_B64}`,
-    `OPENOBSERVE_ORG=${vars.OPENOBSERVE_ORG}`,
+    `OPENOBSERVE_ORGS=${vars.OPENOBSERVE_ORGS}`,
     `DEPLOY_ENV=${vars.DEPLOY_ENV}`,
     `OPENOBSERVE_DATA_DIR=${vars.OPENOBSERVE_DATA_DIR}`,
     '',
@@ -92,7 +92,8 @@ function main() {
   vars.ZO_ROOT_USER_EMAIL = ROOT_EMAIL;
   vars.ZO_ROOT_USER_PASSWORD = password;
   vars.OPENOBSERVE_AUTH_B64 = Buffer.from(`${ROOT_EMAIL}:${password}`, 'utf8').toString('base64');
-  vars.OPENOBSERVE_ORG = vars.OPENOBSERVE_ORG || 'plys';
+  vars.OPENOBSERVE_ORGS =
+    vars.OPENOBSERVE_ORGS || 'internal-hub-api,internal-hub-fe,ployos-fe,lonaos-fe';
   vars.DEPLOY_ENV = deployEnv;
   vars.OPENOBSERVE_DATA_DIR = vars.OPENOBSERVE_DATA_DIR || '/apps/monitoring/data';
 
@@ -100,7 +101,7 @@ function main() {
   // 0644 so CI tar/scp (often a different container user) can read the file before upload.
   writeFileSync(output, serializeEnv(vars), { mode: 0o644 });
 
-  console.log(`Rendered ${output} (deploy_env=${deployEnv}, org=${vars.OPENOBSERVE_ORG})`);
+  console.log(`Rendered ${output} (deploy_env=${deployEnv}, orgs=${vars.OPENOBSERVE_ORGS})`);
 }
 
 try {
